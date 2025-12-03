@@ -1,0 +1,37 @@
+DEPLOYMENT CHECKLIST
+====================
+
+BEFORE UPLOADING:
+[ ] Review .env file settings
+[ ] Remove seed-demo-data.js (don't upload to production)
+[ ] Verify .htaccess configuration
+
+AFTER UPLOADING:
+[ ] Files uploaded successfully
+[ ] npm install completed
+[ ] Database initialized (npm run init-db)
+[ ] Application started in hPanel
+[ ] SSL certificate installed
+[ ] HTTPS working
+[ ] Application accessible via domain
+
+SECURITY:
+[ ] Default passwords changed
+[ ] .env file secured (chmod 600)
+[ ] Database file secured (chmod 600)
+[ ] Firewall configured
+
+MONITORING:
+[ ] Uptime monitoring setup
+[ ] Backup cron job configured
+[ ] Error logging working
+
+TESTING:
+[ ] Can login successfully
+[ ] All modules working
+[ ] Forms submit correctly
+[ ] Search functionality works
+[ ] Export to CSV works
+[ ] Alerts generating
+
+READY TO GO! ✓

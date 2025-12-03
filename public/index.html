@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tender Summary — Form to 2-page PDF (BPPA-style)</title>
+  <style>
+    :root{--green:#6fb93b;--dark:#2f6d28;--muted:#444}
+    body{font-family:Tahoma, Arial, Helvetica, sans-serif;margin:0;background:#eef3ea}
+    .topbar{background:linear-gradient(180deg,var(--green),#5fa132);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:12px}
+    .logo{width:48px;height:48px;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--green);font-weight:700}
+    .nav{display:flex;gap:12px;align-items:center}
+    .nav a{color:#fff;text-decoration:none;font-size:13px;padding:6px 8px;border-radius:4px}
+    .container{max-width:1100px;margin:16px auto;padding:14px;background:#fff;border-radius:6px;box-shadow:0 6px 18px rgba(23,56,12,0.06)}
+
+    h1{font-size:16px;margin:0 0 10px;color:var(--dark)}
+    .search-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+    input[type=text], select, textarea{width:100%;padding:8px;border:1px solid #d1e0c6;border-radius:4px;background:#fbfff8}
+    .controls{display:flex;gap:8px;margin-top:10px}
+    button{background:var(--green);color:#fff;border:0;padding:8px 12px;border-radius:4px;cursor:pointer}
+    button.secondary{background:#f0f0f0;color:#333}
+
+    .preview{margin-top:14px;border:1px solid #e6efdf;padding:12px;border-radius:4px;background:#fcfff9}
+    .results{margin-top:12px;border-collapse:collapse;width:100%}
+    .results th{background:#f6fbf2;color:var(--dark);padding:10px;text-align:left;border-bottom:2px solid #e6efdf}
+    .results td{padding:10px;border-bottom:1px solid #f1f6ec;font-size:13px}
+
+    #output{display:none}
+    .page{width:210mm;min-height:297mm;padding:16mm 14mm;margin:6mm auto;background:#fff;box-sizing:border-box}
+    table.out{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+    table.out th, table.out td{border:1px solid #222;padding:6px;text-align:left}
+
+    @media print{#output{display:block}.container, .controls, form{display:none}}
+    @media (max-width:900px){.search-grid{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">BPPA</div>
+    <div style="flex:1">
+      <div style="font-weight:700">e-GP Tender — Tender Summary Generator</div>
+      <div style="font-size:12px;opacity:0.95">Match design inspired by user screenshot</div>
+    </div>
+    <nav class="nav">
+      <a href="#">Home</a>
+      <a href="#">Tender</a>
+      <a href="#">CMS</a>
+      <a href="#">Doc. Library</a>
+    </nav>
+  </div>
+
+  <div class="container">
+    <h1>Search / Input tender details</h1>
+    <div style="font-size:13px;color:#666;margin-bottom:8px">Use this form to create a tender summary. The output PDF mimics your sample and fits 2 A4 pages.</div>
+
+    <form id="tenderForm">
+      <div class="search-grid">
+        <div>
+          <label>Procuring Entity</label>
+          <input type="text" id="procEntity">
+        </div>
+        <div>
+          <label>Procuring Type</label>
+          <select id="procType"><option>NCT</option><option>OTM</option></select>
+        </div>
+        <div>
+          <label>Procurement Method</label>
+          <input type="text" id="method">
+        </div>
+        <div>
+          <label>e-GP Tender ID</label>
+          <input type="text" id="tenderId">
+        </div>
+
+        <div>
+          <label>Name of Official Inviting Tender</label>
+          <input type="text" id="official">
+        </div>
+        <div>
+          <label>Invitation Ref No</label>
+          <input type="text" id="invRef">
+        </div>
+        <div>
+          <label>Document Price (BDT)</label>
+          <input type="text" id="docPrice">
+        </div>
+        <div>
+          <label>Tender Security</label>
+          <input type="text" id="tSec">
+        </div>
+
+        <div>
+          <label>Brief Description</label>
+          <input type="text" id="briefDesc">
+        </div>
+        <div>
+          <label>Item No</label>
+          <input type="text" id="itemNo">
+        </div>
+        <div>
+          <label>Description of Item</label>
+          <input type="text" id="itemDesc">
+        </div>
+        <div>
+          <label>Technical Spec</label>
+          <input type="text" id="techSpec">
+        </div>
+
+        <div>
+          <label>Quantity</label>
+          <input type="text" id="quantity">
+        </div>
+        <div>
+          <label>Point of Delivery</label>
+          <input type="text" id="pod">
+        </div>
+        <div>
+          <label>Delivery Period</label>
+          <input type="text" id="delivery">
+        </div>
+        <div>
+          <label>Liquid Asset / Credit Commitment</label>
+          <input type="text" id="liquid">
+        </div>
+
+        <div style="grid-column:span 4">
+          <label>Tender Preparation (short)</label>
+          <textarea id="tenderPrep" rows="2"></textarea>
+        </div>
+
+        <div style="grid-column:span 4">
+          <label>Required Documents (short)</label>
+          <textarea id="reqDocs" rows="2"></textarea>
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>Last Date of Document Purchase</label>
+          <input type="text" id="lastPurchase">
+        </div>
+        <div style="grid-column:span 2">
+          <label>Last Date of Submission</label>
+          <input type="text" id="lastSubmission">
+        </div>
+
+        <div style="grid-column:span 2">
+          <label>Tender Opening Date and Time</label>
+          <input type="text" id="opening">
+        </div>
+        <div style="grid-column:span 2">
+          <label>Contact</label>
+          <input type="text" id="contact">
+        </div>
+
+      </div>
+
+      <div class="controls">
+        <button type="button" id="previewBtn">Preview Output</button>
+        <button type="button" id="pdfBtn">Generate 2-page PDF</button>
+        <button type="reset" class="secondary">Reset</button>
+      </div>
+    </form>
+
+    <div class="preview">
+      <table class="results">
+        <tr><th style="width:40px">S.No</th><th style="width:200px">Tender/Proposal ID</th><th>Procurement Nature, Title</th><th style="width:180px">Publishing & Closing</th></tr>
+        <tr><td>1</td><td>1187501</td><td>Goods — Networking & Computers</td><td>02-Dec — 23-Dec</td></tr>
+      </table>
+    </div>
+
+  </div>
+
+  <div id="output">
+    <div class="page" id="page1">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div>
+            <div style="font-weight:700">Procuring Entity:</div>
+            <div id="o_proc" style="margin-bottom:6px"></div>
+            <div style="font-weight:700">Name of the Official Inviting Tender:</div>
+            <div id

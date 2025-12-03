@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bangladesh Tender Management System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #2c7a3a;
+      --secondary: #6fb93b;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --info: #17a2b8;
+      --light: #f8f9fa;
+      --dark: #343a40;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7f9;
+      color: #333;
+    }
+    
+    /* Top Navigation */
+    .topbar {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    /* Sidebar */
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 64px);
+    }
+    
+    .sidebar {
+      width: 250px;
+      background: white;
+      border-right: 1px solid #e0e0e0;
+      padding: 20px 0;
+    }
+    
+    .menu-item {
+      padding: 12px 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #555;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+    
+    .menu-item:hover {
+      background: #f0f7f4;
+      color: var(--primary);
+    }
+    
+    .menu-item.active {
+      background: var(--primary);
+      color: white;
+      border-left: 4px solid var(--secondary);
+    }
+    
+    .menu-section {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #999;
+      padding: 12px 24px 8px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    
+    .page-header {
+      margin-bottom: 24px;
+    }
+    
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 8px;
+    }
+    
+    .page-subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--primary);
+    }
+    
+    .stat-card.warning { border-left-color: var(--warning); }
+    .stat-card.danger { border-left-color: var(--danger); }
+    .stat-card.info { border-left-color: var(--info); }
+    
+    .stat-label {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--dark);
+    }
+    
+    .stat-change {
+      font-size: 12px;
+      color: #28a745;
+      margin-top: 4px;
+    }
+    
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--dark);
+    }
+    
+    .card-body {
+      padding: 20px;
+    }
+    
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      text-align: left;
+      padding: 12px;
+      background: #f8f9fa;
+      font-size: 13px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #dee2e6;
+    }
+    
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    
+    tr:hover {
+      background: #f8f9fa;
+    }
+    
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #245c2f;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    
+    /* Badges */
+    .badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      display: inline-block;
+    }
+    
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    .badge-secondary { background: #e2e3e5; color: #383d41; }
+    
+    /* Alerts */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+    
+    .alert-danger {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+    
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+      border-left: 4px solid #ffc107;
+    }
+    
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border-left: 4px solid #17a2b8;
+    }
+    
+    /* Forms */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(44, 122, 58, 0.1);
+    }
+    
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    
+    .close {
+      cursor: pointer;
+      font-size: 24px;
+      color: #999;
+    }
+    
+    .close:hover {
+      color: #333;
+    }
+    
+    /* Hide pages by default */
+    .page {
+      display: none;
+    }
+    
+    .page.active {
+      display: block;
+    }
+    
+    /* Grid layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    
+    .empty-state svg {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">
+        🇧🇩 Bangladesh Tender Management
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="username">Admin</span>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="menu-item active" data-page="dashboard">📊 Dashboard</div>
+      
+      <div class="menu-section">FIRM MANAGEMENT</div>
+      <div class="menu-item" data-page="firms">🏢 Firms</div>
+      <div class="menu-item" data-page="licenses">📜 Licenses</div>
+      <div class="menu-item" data-page="enlistments">📋 Enlistments</div>
+      <div class="menu-item" data-page="tax">💰 Tax & Compliance</div>
+      
+      <div class="menu-section">BANKING</div>
+      <div class="menu-item" data-page="accounts">🏦 Bank Accounts</div>
+      <div class="menu-item" data-page="pay-orders">💳 Pay Orders</div>
+      <div class="menu-item" data-page="guarantees">🛡️ Bank Guarantees</div>
+      <div class="menu-item" data-page="loans">💵 Loans</div>
+      
+      <div class="menu-section">TENDERS & PROJECTS</div>
+      <div class="menu-item" data-page="tenders">📄 Tenders</div>
+      <div class="menu-item" data-page="projects">🏗️ Projects</div>
+      
+      <div class="menu-section">SYSTEM</div>
+      <div class="menu-item" data-page="alerts">🔔 Alerts</div>
+      <div class="menu-item" data-page="contacts">👥 Contacts</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Dashboard Page -->
+      <div class="page active" id="dashboard">
+        <div class="page-header">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Overview of your tender business operations</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Firms</div>
+            <div class="stat-value" id="stat-firms">0</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-label">Active Tenders</div>
+            <div class="stat-value" id="stat-tenders">0</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-label">Ongoing Projects</div>
+            <div class="stat-value" id="stat-projects">0</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="stat-label">Critical Alerts</div>
+            <div class="stat-value" id="stat-alerts">0</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Critical Alerts</h3>
+            </div>
+            <div class="card-body" id="alerts-list">
+              <div class="loading">Loading alerts...</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Upcoming Deadlines</h3>
+            </div>
+            <div class="card-body" id="deadlines-list">
+              <div class="loading">Loading deadlines...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Recent Tenders</h3>
+          </div>
+          <div class="card-body">
+            <table id="recent-tenders">
+              <thead>
+                <tr>
+                  <th>Tender ID</th>
+                  <th>Procuring Entity</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Submission Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Firms Page -->
+      <div class="page" id="firms">
+        <div class="page-header">
+          <h1 class="page-title">Firms Management</h1>
+          <button class="btn btn-primary" onclick="openFirmModal()">+ Add New Firm</button>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <table id="firms-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Business Type</th>
+                  <th>TIN</th>
+                  <th>Contact</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" class="loading">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Other pages will be similar structure -->
+      <div class="page" id="licenses">
+        <div class="page-header">
+          <h1 class="page-title">Licenses & Registrations</h1>
+          <button class="btn btn-primary" onclick="openLicenseModal()">+ Add License</button>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <table id="licenses-table">
+              <thead>
+                <tr>
+                  <th>Firm</th>
+                  <th>License Type</th>
+                  <th>License No</th>
+                  <th>Issue Date</th>
+                  <th>Expiry Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Placeholder pages -->
+      <div class="page" id="enlistments"><h1 class="page-title">Enlistments</h1><p>Coming soon...</p></div>
+      <div class="page" id="tax"><h1 class="page-title">Tax & Compliance</h1><p>Coming soon...</p></div>
+      <div class="page" id="accounts"><h1 class="page-title">Bank Accounts</h1><p>Coming soon...</p></div>
+      <div class="page" id="pay-orders"><h1 class="page-title">Pay Orders</h1><p>Coming soon...</p></div>
+      <div class="page" id="guarantees"><h1 class="page-title">Bank Guarantees</h1><p>Coming soon...</p></div>
+      <div class="page" id="loans"><h1 class="page-title">Loans</h1><p>Coming soon...</p></div>
+      <div class="page" id="tenders"><h1 class="page-title">Tenders</h1><p>Coming soon...</p></div>
+      <div class="page" id="projects"><h1 class="page-title">Projects</h1><p>Coming soon...</p></div>
+      <div class="page" id="alerts"><h1 class="page-title">Alerts & Notifications</h1><p>Coming soon...</p></div>
+      <div class="page" id="contacts"><h1 class="page-title">Contacts</h1><p>Coming soon...</p></div>
+    </div>
+  </div>
+
+  <!-- Firm Modal -->
+  <div class="modal" id="firmModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add/Edit Firm</h3>
+        <span class="close" onclick="closeFirmModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="firmForm">
+          <input type="hidden" id="firm-id">
+          <div class="form-group">
+            <label>Firm Name *</label>
+            <input type="text" id="firm-name" required>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Business Type</label>
+              <select id="firm-type">
+                <option>Proprietorship</option>
+                <option>Partnership</option>
+                <option>Private Ltd</option>
+                <option>Public Ltd</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>TIN</label>
+              <input type="text" id="firm-tin">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <textarea id="firm-address" rows="2"></textarea>
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="firm-email">
+            </div>
+            <div class="form-group">
+              <label>Mobile</label>
+              <input type="text" id="firm-mobile">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeFirmModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFirm()">Save Firm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // API Base URL
+    const API = '/api';
+
+    // Navigation
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', function() {
+        const page = this.getAttribute('data-page');
+        showPage(page);
+        
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      
+      // Load page data
+      if (pageId === 'dashboard') loadDashboard();
+      else if (pageId === 'firms') loadFirms();
+      else if (pageId === 'licenses') loadLicenses();
+    }
+
+    // Dashboard
+    async function loadDashboard() {
+      try {
+        const stats = await fetch(`${API}/dashboard/stats`).then(r => r.json());
+        document.getElementById('stat-firms').textContent = stats.firms.count;
+        document.getElementById('stat-tenders').textContent = stats.tenders.total.count;
+        document.getElementById('stat-projects').textContent = stats.projects.total.count;
+        document.getElementById('stat-alerts').textContent = stats.alerts.high.count;
+        
+        // Load alerts
+        const alerts = await fetch(`${API}/alerts?status=pending`).then(r => r.json());
+        const alertsList = document.getElementById('alerts-list');
+        if (alerts.length === 0) {
+          alertsList.innerHTML = '<div class="empty-state">No pending alerts</div>';
+        } else {
+          alertsList.innerHTML = alerts.slice(0, 5).map(a => `
+            <div class="alert alert-${a.priority === 'high' ? 'danger' : 'warning'}">
+              ${a.title}
+            </div>
+          `).join('');
+        }
+        
+        // Load recent tenders
+        const tenders = await fetch(`${API}/tenders`).then(r => r.json());
+        const tbody = document.querySelector('#recent-tenders tbody');
+        if (tenders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No tenders found</td></tr>';
+        } else {
+          tbody.innerHTML = tenders.slice(0, 5).map(t => `
+            <tr>
+              <td>${t.tender_id || '-'}</td>
+              <td>${t.procuring_entity || '-'}</td>
+              <td>${t.proc_type || '-'}</td>
+              <td><span class="badge badge-${getStatusColor(t.status)}">${t.status}</span></td>
+              <td>${t.lastSubmission || '-'}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+      }
+    }
+
+    // Firms
+    async function loadFirms() {
+      try {
+        const firms = await fetch(`${API}/firms`).then(r => r.json());
+        const tbody = document.querySelector('#firms-table tbody');
+        
+        if (firms.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No firms found. Add your first firm!</td></tr>';
+        } else {
+          tbody.innerHTML = firms.map(f => `
+            <tr>
+              <td><strong>${f.name}</strong></td>
+              <td>${f.business_type || '-'}</td>
+              <td>${f.tin || '-'}</td>
+              <td>${f.mobile || f.phone || '-'}</td>
+              <td><span class="badge badge-${f.status === 'active' ? 'success' : 'secondary'}">${f.status}</span></td>
+              <td>
+                <button class="btn btn-sm btn-primary" onclick="editFirm(${f.id})">Edit</button>
+                <button class="btn btn-sm btn-secondary" onclick="deleteFirm(${f.id})">Delete</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Firms load error:', err);
+      }
+    }
+
+    function openFirmModal() {
+      document.getElementById('firmModal').classList.add('active');
+      document.getElementById('firmForm').reset();
+    }
+
+    function closeFirmModal() {
+      document.getElementById('firmModal').classList.remove('active');
+    }
+
+    async function saveFirm() {
+      const data = {
+        id: document.getElementById('firm-id').value || null,
+        name: document.getElementById('firm-name').value,
+        business_type: document.getElementById('firm-type').value,
+        tin: document.getElementById('firm-tin').value,
+        address: document.getElementById('firm-address').value,
+        email: document.getElementById('firm-email').value,
+        mobile: document.getElementById('firm-mobile').value,
+        status: 'active'
+      };
+
+      try {
+        await fetch(`${API}/firms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        closeFirmModal();
+        loadFirms();
+        alert('Firm saved successfully!');
+      } catch (err) {
+        console.error('Save error:', err);
+        alert('Error saving firm');
+      }
+    }
+
+    async function deleteFirm(id) {
+      if (!confirm('Delete this firm?')) return;
+      
+      try {
+        await fetch(`${API}/firms/${id}`, { method: 'DELETE' });
+        loadFirms();
+      } catch (err) {
+        console.error('Delete error:', err);
+      }
+    }
+
+    // Licenses
+    async function loadLicenses() {
+      try {
+        const licenses = await fetch(`${API}/licenses`).then(r => r.json());
+        const tbody = document.querySelector('#licenses-table tbody');
+        
+        if (licenses.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No licenses found</td></tr>';
+        } else {
+          tbody.innerHTML = licenses.map(l => `
+            <tr>
+              <td>${l.firm_name || '-'}</td>
+              <td>${l.license_type}</td>
+              <td>${l.license_number || '-'}</td>
+              <td>${l.issue_date || '-'}</td>
+              <td>${l.expiry_date || '-'}</td>
+              <td><span class="badge badge-${l.status === 'active' ? 'success' : 'danger'}">${l.status}</span></td>
+              <td>
+                <button class="btn btn-sm btn-primary">Edit</button>
+                <button class="btn btn-sm btn-secondary">Delete</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Licenses load error:', err);
+      }
+    }
+
+    function getStatusColor(status) {
+      const colors = {
+        'discovered': 'info',
+        'preparing': 'warning',
+        'submitted': 'secondary',
+        'won': 'success',
+        'lost': 'danger',
+        'active': 'success',
+        'ongoing': 'warning'
+      };
+      return colors[status] || 'secondary';
+    }
+
+    // Initialize
+    loadDashboard();
+  </script>
+</body>
+</html>

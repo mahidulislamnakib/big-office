@@ -1,0 +1,66 @@
+HOSTINGER DEPLOYMENT INSTRUCTIONS
+==================================
+
+1. LOGIN TO HOSTINGER
+   - Go to https://hpanel.hostinger.com/
+   - Login with your credentials
+
+2. ENABLE NODE.JS
+   - Go to Advanced → Node.js
+   - Create Application
+   - Select Node.js 18.x or 20.x
+   - Set Application Mode: Production
+   - Set Startup File: server.js
+
+3. UPLOAD FILES
+   - Use FTP/SFTP or File Manager
+   - Upload all files from this folder to:
+     /domains/yourdomain.com/public_html/
+   
+   FTP Details (get from hPanel):
+   - Host: ftp.yourdomain.com
+   - Port: 21 (FTP) or 22 (SFTP)
+   - Username: [from hPanel]
+   - Password: [from hPanel]
+
+4. CONNECT VIA SSH (if available)
+   ssh username@yourdomain.com -p 65002
+   
+   Then run:
+   cd /home/username/domains/yourdomain.com/public_html
+   npm install --production
+   npm run init-db
+
+5. CONFIGURE ENVIRONMENT
+   - Edit .env file with your settings
+   - Change SESSION_SECRET to random string
+   - Update NODE_ENV=production
+
+6. START APPLICATION
+   - Via hPanel: Node.js → Restart
+   - Check status: Should show "Running"
+
+7. SETUP SSL
+   - Go to Security → SSL
+   - Install Free SSL (Let's Encrypt)
+   - Enable Force HTTPS
+
+8. IMPORTANT SECURITY STEPS
+   - Change default passwords immediately
+   - Update .env with secure secrets
+   - Setup automated backups
+   - Test all features
+
+9. ACCESS YOUR APPLICATION
+   https://yourdomain.com
+   
+   Default login:
+   - admin / demo123 (CHANGE THIS!)
+
+10. NEED HELP?
+    - Hostinger 24/7 Chat Support
+    - See HOSTINGER-DEPLOYMENT.md for details
+
+================================================
+Ready to deploy! Upload these files to Hostinger.
+================================================

@@ -1,0 +1,471 @@
+<!-- TENDER SUMMARY FORM TEMPLATE -->
+<!-- This will be loaded into the modal dynamically -->
+
+<style>
+.tender-summary-form {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.section-header {
+  background: #f8f9fa;
+  padding: 10px 15px;
+  margin: 20px -20px 15px -20px;
+  border-left: 4px solid #007bff;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.section-header:first-child {
+  margin-top: 0;
+}
+
+.items-table, .requirements-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.items-table th, .items-table td,
+.requirements-table th, .requirements-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.items-table th, .requirements-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.items-table input, .items-table textarea,
+.requirements-table input, .requirements-table textarea {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.items-table textarea, .requirements-table textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+
+.btn-add-row {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.btn-add-row:hover {
+  background: #218838;
+}
+
+.btn-remove-row {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn-remove-row:hover {
+  background: #c82333;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.form-field label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+
+.form-field input, .form-field select, .form-field textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+</style>
+
+<div class="tender-summary-form">
+  <!-- Basic Tender Information -->
+  <div class="section-header">📄 Basic Tender Information (e-GP Format)</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>e-GP Tender ID</label>
+      <input type="text" id="egp_tender_id" placeholder="e.g., 1131373">
+    </div>
+    <div class="form-field">
+      <label>Invitation Reference</label>
+      <input type="text" id="invitation_reference" placeholder="e.g., 54.01.1543.335.08.011.25">
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Procuring Entity *</label>
+      <input type="text" id="procuring_entity" required placeholder="e.g., Chief Controller of Stores, Pahartali">
+    </div>
+    <div class="form-field">
+      <label>Official Inviting Tender</label>
+      <input type="text" id="official_inviting_tender" placeholder="Name of official">
+    </div>
+  </div>
+  
+  <div class="form-row full">
+    <div class="form-field">
+      <label>Brief Description *</label>
+      <textarea id="brief_description" required placeholder="Procurement of Wheel Set Guide, Item No: 104-00720..."></textarea>
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Invitation Date</label>
+      <input type="date" id="invitation_date">
+    </div>
+    <div class="form-field">
+      <label>Document Price (BDT)</label>
+      <input type="number" id="document_price" step="0.01" placeholder="e.g., 2000">
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section-header">📅 Important Dates</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Document Purchase Deadline</label>
+      <input type="datetime-local" id="document_purchase_deadline">
+    </div>
+    <div class="form-field">
+      <label>Submission Deadline *</label>
+      <input type="datetime-local" id="submission_deadline" required>
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Tender Opening Date</label>
+      <input type="datetime-local" id="tender_opening_date">
+    </div>
+    <div class="form-field">
+      <label>Procurement Type</label>
+      <select id="procurement_type">
+        <option value="">Select...</option>
+        <option value="NCT">NCT (National Competitive Tendering)</option>
+        <option value="OCT">OCT (Open Competitive Tendering)</option>
+        <option value="RFQ">RFQ (Request for Quotation)</option>
+        <option value="Direct">Direct Procurement</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Procurement Method</label>
+      <select id="procurement_method">
+        <option value="">Select...</option>
+        <option value="OSTETM">OSTETM (Open Single Tender Envelope Two Envelope Method)</option>
+        <option value="OTM">OTM (Open Tendering Method)</option>
+        <option value="LTM">LTM (Limited Tendering Method)</option>
+        <option value="RFP">RFP (Request for Proposal)</option>
+      </select>
+    </div>
+    <div class="form-field"></div>
+  </div>
+
+  <!-- Financial Requirements -->
+  <div class="section-header">💰 Financial Requirements</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Tender Security Amount (BDT)</label>
+      <input type="number" id="tender_security_amount" step="0.01" placeholder="e.g., 350000">
+    </div>
+    <div class="form-field">
+      <label>In Favour Of</label>
+      <input type="text" id="tender_security_in_favour_of" placeholder="e.g., FA & CAO (East), Bangladesh Railway">
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Liquid Asset Requirement (BDT)</label>
+      <input type="number" id="liquid_asset_requirement" step="0.01" placeholder="e.g., 11500000">
+    </div>
+    <div class="form-field">
+      <label>In Favour Of</label>
+      <input type="text" id="liquid_asset_in_favour_of" placeholder="The Chief Controller of Stores">
+    </div>
+  </div>
+
+  <!-- Items/BOQ Section -->
+  <div class="section-header">📦 Items / Bill of Quantities</div>
+  <table class="items-table" id="items-table">
+    <thead>
+      <tr>
+        <th style="width: 40px;">No</th>
+        <th style="width: 200px;">Description</th>
+        <th style="width: 200px;">Technical Specification</th>
+        <th style="width: 80px;">Quantity</th>
+        <th style="width: 60px;">Unit</th>
+        <th style="width: 120px;">Point of Delivery</th>
+        <th style="width: 80px;">Delivery Period</th>
+        <th style="width: 40px;"></th>
+      </tr>
+    </thead>
+    <tbody id="items-tbody">
+      <tr>
+        <td><input type="text" class="item-no" value="01" placeholder="01"></td>
+        <td><textarea class="item-description" rows="2" placeholder="Wheel Set Guide, Item No: 104-00720"></textarea></td>
+        <td><textarea class="item-specification" rows="2" placeholder="Drawing No: 0118289-E-04-0543-2"></textarea></td>
+        <td><input type="text" class="item-quantity" placeholder="515 Nos"></td>
+        <td><input type="text" class="item-unit" placeholder="Nos"></td>
+        <td><input type="text" class="item-delivery" placeholder="DCOS/INSP/PHT"></td>
+        <td><input type="text" class="item-period" placeholder="120 days"></td>
+        <td><button type="button" class="btn-remove-row" onclick="removeTableRow(this)">×</button></td>
+      </tr>
+    </tbody>
+  </table>
+  <button type="button" class="btn-add-row" onclick="addItemRow()">+ Add Item</button>
+
+  <!-- Inspection & Testing -->
+  <div class="section-header">🔍 Inspection & Testing</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Type of Test</label>
+      <input type="text" id="inspection_type" placeholder="e.g., Physical Inspection; BUET Test">
+    </div>
+    <div class="form-field">
+      <label>Milestone</label>
+      <input type="text" id="inspection_milestone" placeholder="e.g., After delivery">
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Inspection Place</label>
+      <input type="text" id="inspection_place" placeholder="e.g., District Controller of Stores, Pahartali">
+    </div>
+    <div class="form-field"></div>
+  </div>
+  
+  <div class="form-row full">
+    <div class="form-field">
+      <label>Inspection Procedure</label>
+      <textarea id="inspection_procedure" rows="3" placeholder="Describe the inspection and testing procedure..."></textarea>
+    </div>
+  </div>
+
+  <!-- Preparation Requirements -->
+  <div class="section-header">✅ Tender Preparation Requirements</div>
+  <table class="requirements-table" id="requirements-table">
+    <thead>
+      <tr>
+        <th style="width: 40px;">No</th>
+        <th>Requirement</th>
+        <th style="width: 80px;">Fulfilled?</th>
+        <th style="width: 40px;"></th>
+      </tr>
+    </thead>
+    <tbody id="requirements-tbody">
+      <tr>
+        <td><input type="number" class="req-no" value="1"></td>
+        <td><textarea class="req-text" rows="2" placeholder="e.g., General Experience: 5 (Five) years"></textarea></td>
+        <td style="text-align: center;"><input type="checkbox" class="req-fulfilled"></td>
+        <td><button type="button" class="btn-remove-row" onclick="removeTableRow(this)">×</button></td>
+      </tr>
+    </tbody>
+  </table>
+  <button type="button" class="btn-add-row" onclick="addRequirementRow()">+ Add Requirement</button>
+
+  <!-- Analysis Fields -->
+  <div class="section-header">📊 Financial Analysis</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Estimated Tender Value (BDT)</label>
+      <input type="number" id="estimated_tender_value" step="0.01" placeholder="Total estimated value">
+    </div>
+    <div class="form-field">
+      <label>Our Estimated Cost (BDT)</label>
+      <input type="number" id="our_estimated_cost" step="0.01" placeholder="Our cost estimation">
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Profit Margin (%)</label>
+      <input type="number" id="profit_margin" step="0.01" placeholder="e.g., 15">
+    </div>
+    <div class="form-field">
+      <label>Materials Cost (BDT)</label>
+      <input type="number" id="materials_cost" step="0.01">
+    </div>
+  </div>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label>Labor Cost (BDT)</label>
+      <input type="number" id="labor_cost" step="0.01">
+    </div>
+    <div class="form-field">
+      <label>Overhead Cost (BDT)</label>
+      <input type="number" id="overhead_cost" step="0.01">
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section-header">⏱️ Project Timeline</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Preparation Days</label>
+      <input type="number" id="preparation_days" placeholder="Days needed to prepare tender">
+    </div>
+    <div class="form-field">
+      <label>Execution Days</label>
+      <input type="number" id="execution_days" placeholder="Days to complete delivery">
+    </div>
+  </div>
+
+  <!-- Risk Assessment -->
+  <div class="section-header">⚠️ Risk Assessment</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Risk Level</label>
+      <select id="risk_level">
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+      </select>
+    </div>
+    <div class="form-field"></div>
+  </div>
+  
+  <div class="form-row full">
+    <div class="form-field">
+      <label>Risks (one per line)</label>
+      <textarea id="risks" rows="3" placeholder="List identified risks...&#10;- Technical specifications may be difficult to meet&#10;- Delivery timeline is tight"></textarea>
+    </div>
+  </div>
+  
+  <div class="form-row full">
+    <div class="form-field">
+      <label>Mitigation Plans</label>
+      <textarea id="mitigation_plans" rows="3" placeholder="Mitigation strategies..."></textarea>
+    </div>
+  </div>
+
+  <!-- Decision Support -->
+  <div class="section-header">🎯 Decision & Recommendation</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Recommendation</label>
+      <select id="recommendation">
+        <option value="should_participate">Should Participate</option>
+        <option value="risky">Risky - Needs Careful Evaluation</option>
+        <option value="avoid">Avoid</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Confidence Level</label>
+      <select id="confidence_level">
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="form-row full">
+    <div class="form-field">
+      <label>Executive Summary</label>
+      <textarea id="executive_summary" rows="5" placeholder="Provide a comprehensive summary of the tender opportunity, analysis, and recommendation..."></textarea>
+    </div>
+  </div>
+  
+  <div class="form-row full">
+    <div class="form-field">
+      <label>Additional Notes</label>
+      <textarea id="notes" rows="3" placeholder="Any additional notes or observations..."></textarea>
+    </div>
+  </div>
+
+  <!-- Metadata -->
+  <div class="section-header">🏢 Firm Assignment</div>
+  <div class="form-row">
+    <div class="form-field">
+      <label>Firm</label>
+      <select id="firm_id">
+        <option value="">Select Firm (Optional)</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label>Link to Tender (Optional)</label>
+      <select id="tender_id">
+        <option value="">Select Tender...</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+// Helper functions for dynamic rows
+function addItemRow() {
+  const tbody = document.getElementById('items-tbody');
+  const rowCount = tbody.rows.length + 1;
+  const row = tbody.insertRow();
+  row.innerHTML = `
+    <td><input type="text" class="item-no" value="${String(rowCount).padStart(2, '0')}" placeholder="${String(rowCount).padStart(2, '0')}"></td>
+    <td><textarea class="item-description" rows="2" placeholder="Item description"></textarea></td>
+    <td><textarea class="item-specification" rows="2" placeholder="Technical specification"></textarea></td>
+    <td><input type="text" class="item-quantity" placeholder="Quantity"></td>
+    <td><input type="text" class="item-unit" placeholder="Unit"></td>
+    <td><input type="text" class="item-delivery" placeholder="Delivery point"></td>
+    <td><input type="text" class="item-period" placeholder="Period"></td>
+    <td><button type="button" class="btn-remove-row" onclick="removeTableRow(this)">×</button></td>
+  `;
+}
+
+function addRequirementRow() {
+  const tbody = document.getElementById('requirements-tbody');
+  const rowCount = tbody.rows.length + 1;
+  const row = tbody.insertRow();
+  row.innerHTML = `
+    <td><input type="number" class="req-no" value="${rowCount}"></td>
+    <td><textarea class="req-text" rows="2" placeholder="Requirement description"></textarea></td>
+    <td style="text-align: center;"><input type="checkbox" class="req-fulfilled"></td>
+    <td><button type="button" class="btn-remove-row" onclick="removeTableRow(this)">×</button></td>
+  `;
+}
+
+function removeTableRow(btn) {
+  const row = btn.closest('tr');
+  row.remove();
+}
+</script>
