@@ -1,0 +1,12 @@
+# Render Deployment Configuration
+# https://render.com
+
+# Build Command
+npm install && npm run init-db
+
+# Start Command
+npm start
+
+# Environment Variables (set in Render dashboard)
+NODE_ENV=production
+PORT=3000
