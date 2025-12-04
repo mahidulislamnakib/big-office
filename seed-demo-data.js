@@ -562,6 +562,212 @@ console.log(`✓ ${suppliers.length} Suppliers`);
 console.log(`✓ ${clients.length} Clients`);
 console.log(`✓ ${users.length} Users`);
 console.log(`✓ 1 Tender Summary (with items & requirements)`);
+
+// ============================================
+// LETTER HUB
+// ============================================
+console.log('\n📝 Seeding Letter Hub...');
+const letterCategories = [
+  { name: 'Business', description: 'Business correspondence letters', icon: '💼' },
+  { name: 'Legal', description: 'Legal and compliance letters', icon: '⚖️' },
+  { name: 'HR', description: 'Human resources letters', icon: '👥' },
+  { name: 'Project', description: 'Project-related correspondence', icon: '📊' },
+  { name: 'Compliance', description: 'Regulatory compliance letters', icon: '✅' },
+  { name: 'General', description: 'General purpose letters', icon: '📄' }
+];
+
+letterCategories.forEach(cat => {
+  run('INSERT INTO letter_categories (name, description, icon) VALUES (?, ?, ?)',
+    [cat.name, cat.description, cat.icon]
+  );
+});
+
+const letterTemplates = [
+  {
+    category_id: 1,
+    title: 'Tender Submission Cover Letter',
+    subject: 'Submission of Tender for {{project_name}}',
+    content: `Dear {{recipient_name}},
+
+Subject: Submission of Tender for {{project_name}}
+
+We are pleased to submit our tender proposal for the above-mentioned project. Our company, {{company_name}}, has extensive experience in {{category}} projects.
+
+Tender Details:
+- Tender ID: {{tender_id}}
+- Project: {{project_name}}
+- Submitted By: {{submitted_by}}
+- Date: {{date}}
+
+All required documents are enclosed with this application. We look forward to your favorable consideration.
+
+Thank you for this opportunity.
+
+Sincerely,
+{{sender_name}}
+{{sender_designation}}
+{{company_name}}`,
+    tags: 'tender,submission,proposal',
+    created_by: 1
+  },
+  {
+    category_id: 2,
+    title: 'License Renewal Application',
+    subject: 'Application for Renewal of {{license_type}}',
+    content: `To,
+{{recipient_name}}
+{{recipient_designation}}
+{{recipient_organization}}
+
+Subject: Application for Renewal of {{license_type}}
+
+Dear Sir/Madam,
+
+We, {{company_name}}, hereby apply for the renewal of our {{license_type}} (License No: {{license_number}}) which is due to expire on {{expiry_date}}.
+
+All required documents and fees are enclosed. We request your kind consideration for prompt renewal.
+
+Company Details:
+- Name: {{company_name}}
+- TIN: {{tin}}
+- Address: {{address}}
+
+Thank you for your cooperation.
+
+Yours faithfully,
+{{sender_name}}
+{{sender_designation}}`,
+    tags: 'license,renewal,compliance',
+    created_by: 1
+  },
+  {
+    category_id: 4,
+    title: 'Project Completion Letter',
+    subject: 'Notification of Project Completion - {{project_name}}',
+    content: `Dear {{recipient_name}},
+
+Subject: Notification of Project Completion - {{project_name}}
+
+We are pleased to inform you that the project "{{project_name}}" has been successfully completed as per the agreement dated {{agreement_date}}.
+
+Project Summary:
+- Project Name: {{project_name}}
+- Contract Value: {{contract_value}}
+- Completion Date: {{completion_date}}
+- Location: {{location}}
+
+All deliverables have been handed over and final inspections completed. We request your team to conduct the final acceptance review at your earliest convenience.
+
+Thank you for your cooperation throughout the project.
+
+Best regards,
+{{sender_name}}
+{{company_name}}`,
+    tags: 'project,completion,notification',
+    created_by: 1
+  }
+];
+
+letterTemplates.forEach(template => {
+  run(`INSERT INTO letter_templates (category_id, title, subject, content, tags, created_by) 
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [template.category_id, template.title, template.subject, template.content, template.tags, template.created_by]
+  );
+});
+console.log('✓ Created 6 letter categories and 3 templates');
+
+// ============================================
+// EXPENSE MANAGER
+// ============================================
+console.log('💰 Seeding Expense Manager...');
+const expenseCategories = [
+  { name: 'Office Expenses', description: 'Rent, utilities, maintenance', icon: '🏢', budget_limit: 50000 },
+  { name: 'Salaries & Wages', description: 'Employee compensation', icon: '💵', budget_limit: 200000 },
+  { name: 'Travel & Transport', description: 'Business travel expenses', icon: '🚗', budget_limit: 30000 },
+  { name: 'Materials & Supplies', description: 'Project materials and supplies', icon: '🛠️', budget_limit: 100000 },
+  { name: 'Equipment', description: 'Machinery and equipment', icon: '⚙️', budget_limit: 150000 },
+  { name: 'Professional Services', description: 'Consultancy, legal fees', icon: '👔', budget_limit: 40000 },
+  { name: 'Marketing', description: 'Advertising and promotion', icon: '📢', budget_limit: 25000 },
+  { name: 'Miscellaneous', description: 'Other expenses', icon: '��', budget_limit: 15000 }
+];
+
+expenseCategories.forEach(cat => {
+  run('INSERT INTO expense_categories (name, description, icon, budget_limit) VALUES (?, ?, ?, ?)',
+    [cat.name, cat.description, cat.icon, cat.budget_limit]
+  );
+});
+
+const sampleExpenses = [
+  {
+    category_id: 1,
+    expense_date: '2025-11-15',
+    amount: 35000,
+    payment_method: 'bank_transfer',
+    vendor_name: 'Property Management Ltd',
+    description: 'Office rent for November 2025',
+    status: 'paid',
+    created_by: 1
+  },
+  {
+    category_id: 3,
+    firm_id: 1,
+    expense_date: '2025-11-20',
+    amount: 8500,
+    payment_method: 'cash',
+    vendor_name: 'City Transport',
+    description: 'Site visit transportation - Green Earth project',
+    status: 'approved',
+    is_billable: 1,
+    created_by: 1
+  },
+  {
+    category_id: 4,
+    project_id: 1,
+    expense_date: '2025-11-25',
+    amount: 125000,
+    payment_method: 'check',
+    payment_reference: 'CHK-2025-1145',
+    vendor_name: 'Building Materials Supplier',
+    description: 'Construction materials for City Plaza',
+    status: 'paid',
+    created_by: 1
+  }
+];
+
+sampleExpenses.forEach(exp => {
+  const fields = [];
+  const values = [];
+  const placeholders = [];
+  
+  Object.keys(exp).forEach(key => {
+    fields.push(key);
+    values.push(exp[key]);
+    placeholders.push('?');
+  });
+  
+  run(`INSERT INTO expenses (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`, values);
+});
+console.log('✓ Created 8 expense categories and 3 sample expenses');
+
+console.log('\n========================================');
+console.log('DEMO DATA SEEDING COMPLETED!');
+console.log('========================================');
+console.log(`✓ ${firms.length} Firms`);
+console.log(`✓ ${licenses.length} Licenses`);
+console.log(`✓ ${enlistments.length} Enlistments`);
+console.log(`✓ ${accounts.length} Bank Accounts`);
+console.log(`✓ ${guarantees.length} Bank Guarantees`);
+console.log(`✓ ${tenders.length} Tenders`);
+console.log(`✓ ${projects.length} Projects`);
+console.log(`✓ ${contacts.length} Contacts`);
+console.log(`✓ ${teamMembers.length} Team Members`);
+console.log(`✓ ${tasks.length} Tasks`);
+console.log(`✓ ${suppliers.length} Suppliers`);
+console.log(`✓ ${clients.length} Clients`);
+console.log(`✓ ${users.length} Users`);
+console.log(`✓ 1 Tender Summary (with items & requirements)`);
+console.log('✓ 6 Letter Categories & 3 Templates');
+console.log('✓ 8 Expense Categories & 3 Sample Expenses');
 console.log('\nLogin credentials:');
 console.log('  Username: admin, Password: demo123');
 console.log('  Username: manager, Password: demo123');

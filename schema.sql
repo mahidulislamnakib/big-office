@@ -732,3 +732,139 @@ CREATE INDEX IF NOT EXISTS idx_clients_type ON clients(organization_type);
 CREATE INDEX IF NOT EXISTS idx_client_contacts_client ON client_contacts(client_id);
 CREATE INDEX IF NOT EXISTS idx_tender_summaries_tender ON tender_summaries(tender_id);
 CREATE INDEX IF NOT EXISTS idx_tender_summaries_firm ON tender_summaries(firm_id);
+
+-- ============================================
+-- LETTER HUB - Letter Templates & Management
+-- ============================================
+CREATE TABLE IF NOT EXISTS letter_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE, -- Business, Legal, HR, Project, Compliance, General
+  description TEXT,
+  icon TEXT, -- emoji or icon name
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS letter_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  subject TEXT,
+  content TEXT NOT NULL, -- Letter body with placeholders like {{company_name}}, {{date}}, etc.
+  tags TEXT, -- Comma-separated tags for search
+  language TEXT DEFAULT 'en', -- en, bn
+  is_official BOOLEAN DEFAULT 1,
+  usage_count INTEGER DEFAULT 0,
+  created_by INTEGER,
+  status TEXT DEFAULT 'active', -- active, archived
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES letter_categories(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS generated_letters (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  template_id INTEGER,
+  firm_id INTEGER,
+  project_id INTEGER,
+  reference_number TEXT,
+  recipient_name TEXT,
+  recipient_designation TEXT,
+  recipient_organization TEXT,
+  recipient_address TEXT,
+  subject TEXT,
+  content TEXT NOT NULL, -- Final letter with placeholders replaced
+  letter_date TEXT,
+  generated_by INTEGER,
+  sent_date TEXT,
+  status TEXT DEFAULT 'draft', -- draft, sent, archived
+  document_path TEXT, -- Path to PDF if generated
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (template_id) REFERENCES letter_templates(id),
+  FOREIGN KEY (firm_id) REFERENCES firms(id),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (generated_by) REFERENCES users(id)
+);
+
+-- ============================================
+-- EXPENSE MANAGER
+-- ============================================
+CREATE TABLE IF NOT EXISTS expense_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE, -- Office Rent, Utilities, Salaries, Travel, Materials, Equipment, etc.
+  parent_id INTEGER, -- For subcategories
+  description TEXT,
+  budget_limit REAL, -- Monthly or yearly budget limit
+  icon TEXT,
+  is_active BOOLEAN DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parent_id) REFERENCES expense_categories(id)
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL,
+  firm_id INTEGER, -- Which firm/client this expense is for
+  project_id INTEGER, -- Which project this expense relates to
+  expense_date TEXT NOT NULL,
+  amount REAL NOT NULL,
+  payment_method TEXT, -- cash, bank_transfer, check, card, mobile_banking
+  payment_reference TEXT, -- Check number, transaction ID, etc.
+  vendor_name TEXT,
+  vendor_contact TEXT,
+  description TEXT NOT NULL,
+  receipt_number TEXT,
+  receipt_path TEXT, -- Path to uploaded receipt/invoice
+  is_billable BOOLEAN DEFAULT 0, -- Can be billed to client
+  is_reimbursable BOOLEAN DEFAULT 0,
+  reimbursed BOOLEAN DEFAULT 0,
+  reimbursement_date TEXT,
+  approved_by INTEGER,
+  approval_date TEXT,
+  status TEXT DEFAULT 'pending', -- pending, approved, rejected, paid, reimbursed
+  notes TEXT,
+  created_by INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES expense_categories(id),
+  FOREIGN KEY (firm_id) REFERENCES firms(id),
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (approved_by) REFERENCES users(id),
+  FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS expense_budgets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL,
+  project_id INTEGER,
+  budget_amount REAL NOT NULL,
+  period_type TEXT NOT NULL, -- monthly, quarterly, yearly
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  spent_amount REAL DEFAULT 0,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES expense_categories(id),
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Indexes for new modules
+CREATE INDEX IF NOT EXISTS idx_letter_templates_category ON letter_templates(category_id);
+CREATE INDEX IF NOT EXISTS idx_letter_templates_status ON letter_templates(status);
+CREATE INDEX IF NOT EXISTS idx_generated_letters_template ON generated_letters(template_id);
+CREATE INDEX IF NOT EXISTS idx_generated_letters_firm ON generated_letters(firm_id);
+CREATE INDEX IF NOT EXISTS idx_generated_letters_status ON generated_letters(status);
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_firm ON expenses(firm_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_project ON expenses(project_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);
+CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
+CREATE INDEX IF NOT EXISTS idx_expense_budgets_category ON expense_budgets(category_id);
+CREATE INDEX IF NOT EXISTS idx_expense_budgets_project ON expense_budgets(project_id);
+
