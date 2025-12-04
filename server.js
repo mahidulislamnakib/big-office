@@ -1898,6 +1898,344 @@ app.get('/api/alerts/stats', (req, res) => {
 // ============================================
 // Fallback: serve index.html for any other route (SPA)
 // ============================================
+// LETTER HUB API
+// ============================================
+
+// Letter Categories
+app.get('/api/letter-categories', (req, res) => {
+  const rows = all('SELECT * FROM letter_categories ORDER BY name');
+  res.json(rows);
+});
+
+app.post('/api/letter-categories', (req, res) => {
+  const { name, description, icon } = req.body;
+  const result = run(
+    'INSERT INTO letter_categories (name, description, icon) VALUES (?, ?, ?)',
+    [name, description, icon]
+  );
+  res.json({ id: result.lastInsertRowid, name, description, icon });
+});
+
+app.put('/api/letter-categories/:id', (req, res) => {
+  const { name, description, icon } = req.body;
+  run(
+    'UPDATE letter_categories SET name = ?, description = ?, icon = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [name, description, icon, req.params.id]
+  );
+  res.json({ success: true });
+});
+
+app.delete('/api/letter-categories/:id', (req, res) => {
+  run('DELETE FROM letter_categories WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// Letter Templates
+app.get('/api/letter-templates', (req, res) => {
+  const rows = all(`
+    SELECT lt.*, lc.name as category_name, u.username as created_by_name
+    FROM letter_templates lt
+    LEFT JOIN letter_categories lc ON lt.category_id = lc.id
+    LEFT JOIN users u ON lt.created_by = u.id
+    ORDER BY lt.created_at DESC
+  `);
+  res.json(rows);
+});
+
+app.get('/api/letter-templates/:id', (req, res) => {
+  const template = row('SELECT * FROM letter_templates WHERE id = ?', [req.params.id]);
+  if (!template) return res.status(404).json({ error: 'Template not found' });
+  res.json(template);
+});
+
+app.post('/api/letter-templates', (req, res) => {
+  const { category_id, title, subject, content, tags, language, is_official, notes, created_by } = req.body;
+  const result = run(
+    `INSERT INTO letter_templates (category_id, title, subject, content, tags, language, is_official, notes, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [category_id, title, subject, content, tags, language || 'en', is_official !== false ? 1 : 0, notes, created_by]
+  );
+  res.json({ id: result.lastInsertRowid });
+});
+
+app.put('/api/letter-templates/:id', (req, res) => {
+  const { category_id, title, subject, content, tags, language, is_official, status, notes } = req.body;
+  run(
+    `UPDATE letter_templates SET category_id = ?, title = ?, subject = ?, content = ?, tags = ?, 
+     language = ?, is_official = ?, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [category_id, title, subject, content, tags, language, is_official, status, notes, req.params.id]
+  );
+  run('UPDATE letter_templates SET usage_count = usage_count + 1 WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+app.delete('/api/letter-templates/:id', (req, res) => {
+  run('DELETE FROM letter_templates WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// Generated Letters
+app.get('/api/generated-letters', (req, res) => {
+  const rows = all(`
+    SELECT gl.*, f.name as firm_name, p.name as project_name, u.username as generated_by_name
+    FROM generated_letters gl
+    LEFT JOIN firms f ON gl.firm_id = f.id
+    LEFT JOIN projects p ON gl.project_id = p.id
+    LEFT JOIN users u ON gl.generated_by = u.id
+    ORDER BY gl.created_at DESC
+  `);
+  res.json(rows);
+});
+
+app.get('/api/generated-letters/:id', (req, res) => {
+  const letter = row('SELECT * FROM generated_letters WHERE id = ?', [req.params.id]);
+  if (!letter) return res.status(404).json({ error: 'Letter not found' });
+  res.json(letter);
+});
+
+app.post('/api/generated-letters', (req, res) => {
+  const { template_id, firm_id, project_id, reference_number, recipient_name, recipient_designation,
+          recipient_organization, recipient_address, subject, content, letter_date, status, notes, generated_by } = req.body;
+  const result = run(
+    `INSERT INTO generated_letters (template_id, firm_id, project_id, reference_number, recipient_name,
+     recipient_designation, recipient_organization, recipient_address, subject, content, letter_date, status, notes, generated_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [template_id, firm_id, project_id, reference_number, recipient_name, recipient_designation,
+     recipient_organization, recipient_address, subject, content, letter_date, status || 'draft', notes, generated_by]
+  );
+  res.json({ id: result.lastInsertRowid });
+});
+
+app.put('/api/generated-letters/:id', (req, res) => {
+  const { recipient_name, recipient_designation, recipient_organization, recipient_address,
+          subject, content, letter_date, sent_date, status, notes } = req.body;
+  run(
+    `UPDATE generated_letters SET recipient_name = ?, recipient_designation = ?, recipient_organization = ?,
+     recipient_address = ?, subject = ?, content = ?, letter_date = ?, sent_date = ?, status = ?, notes = ?,
+     updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [recipient_name, recipient_designation, recipient_organization, recipient_address,
+     subject, content, letter_date, sent_date, status, notes, req.params.id]
+  );
+  res.json({ success: true });
+});
+
+app.delete('/api/generated-letters/:id', (req, res) => {
+  run('DELETE FROM generated_letters WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ============================================
+// EXPENSE MANAGER API
+// ============================================
+
+// Expense Categories
+app.get('/api/expense-categories', (req, res) => {
+  const rows = all('SELECT * FROM expense_categories WHERE is_active = 1 ORDER BY name');
+  res.json(rows);
+});
+
+app.post('/api/expense-categories', (req, res) => {
+  const { name, parent_id, description, budget_limit, icon } = req.body;
+  const result = run(
+    'INSERT INTO expense_categories (name, parent_id, description, budget_limit, icon) VALUES (?, ?, ?, ?, ?)',
+    [name, parent_id, description, budget_limit, icon]
+  );
+  res.json({ id: result.lastInsertRowid });
+});
+
+app.put('/api/expense-categories/:id', (req, res) => {
+  const { name, description, budget_limit, icon, is_active } = req.body;
+  run(
+    'UPDATE expense_categories SET name = ?, description = ?, budget_limit = ?, icon = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [name, description, budget_limit, icon, is_active, req.params.id]
+  );
+  res.json({ success: true });
+});
+
+app.delete('/api/expense-categories/:id', (req, res) => {
+  run('UPDATE expense_categories SET is_active = 0 WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// Expenses
+app.get('/api/expenses', (req, res) => {
+  const { status, firm_id, project_id, start_date, end_date } = req.query;
+  let sql = `
+    SELECT e.*, ec.name as category_name, ec.icon as category_icon,
+           f.name as firm_name, p.name as project_name, u.username as created_by_name
+    FROM expenses e
+    LEFT JOIN expense_categories ec ON e.category_id = ec.id
+    LEFT JOIN firms f ON e.firm_id = f.id
+    LEFT JOIN projects p ON e.project_id = p.id
+    LEFT JOIN users u ON e.created_by = u.id
+    WHERE 1=1
+  `;
+  const params = [];
+  
+  if (status) {
+    sql += ' AND e.status = ?';
+    params.push(status);
+  }
+  if (firm_id) {
+    sql += ' AND e.firm_id = ?';
+    params.push(firm_id);
+  }
+  if (project_id) {
+    sql += ' AND e.project_id = ?';
+    params.push(project_id);
+  }
+  if (start_date) {
+    sql += ' AND e.expense_date >= ?';
+    params.push(start_date);
+  }
+  if (end_date) {
+    sql += ' AND e.expense_date <= ?';
+    params.push(end_date);
+  }
+  
+  sql += ' ORDER BY e.expense_date DESC, e.created_at DESC';
+  
+  const rows = all(sql, params);
+  res.json(rows);
+});
+
+app.get('/api/expenses/:id', (req, res) => {
+  const expense = row('SELECT * FROM expenses WHERE id = ?', [req.params.id]);
+  if (!expense) return res.status(404).json({ error: 'Expense not found' });
+  res.json(expense);
+});
+
+app.post('/api/expenses', (req, res) => {
+  const { category_id, firm_id, project_id, expense_date, amount, payment_method, payment_reference,
+          vendor_name, vendor_contact, description, receipt_number, is_billable, is_reimbursable,
+          status, notes, created_by } = req.body;
+  const result = run(
+    `INSERT INTO expenses (category_id, firm_id, project_id, expense_date, amount, payment_method,
+     payment_reference, vendor_name, vendor_contact, description, receipt_number, is_billable,
+     is_reimbursable, status, notes, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [category_id, firm_id, project_id, expense_date, amount, payment_method, payment_reference,
+     vendor_name, vendor_contact, description, receipt_number, is_billable || 0, is_reimbursable || 0,
+     status || 'pending', notes, created_by]
+  );
+  res.json({ id: result.lastInsertRowid });
+});
+
+app.put('/api/expenses/:id', (req, res) => {
+  const { category_id, firm_id, project_id, expense_date, amount, payment_method, payment_reference,
+          vendor_name, vendor_contact, description, receipt_number, is_billable, is_reimbursable,
+          reimbursed, reimbursement_date, approved_by, approval_date, status, notes } = req.body;
+  run(
+    `UPDATE expenses SET category_id = ?, firm_id = ?, project_id = ?, expense_date = ?, amount = ?,
+     payment_method = ?, payment_reference = ?, vendor_name = ?, vendor_contact = ?, description = ?,
+     receipt_number = ?, is_billable = ?, is_reimbursable = ?, reimbursed = ?, reimbursement_date = ?,
+     approved_by = ?, approval_date = ?, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [category_id, firm_id, project_id, expense_date, amount, payment_method, payment_reference,
+     vendor_name, vendor_contact, description, receipt_number, is_billable, is_reimbursable,
+     reimbursed, reimbursement_date, approved_by, approval_date, status, notes, req.params.id]
+  );
+  res.json({ success: true });
+});
+
+app.delete('/api/expenses/:id', (req, res) => {
+  run('DELETE FROM expenses WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// Expense Statistics
+app.get('/api/expenses/stats/summary', (req, res) => {
+  const { start_date, end_date } = req.query;
+  let sql = `
+    SELECT 
+      COUNT(*) as total_count,
+      SUM(amount) as total_amount,
+      SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pending_amount,
+      SUM(CASE WHEN status = 'approved' THEN amount ELSE 0 END) as approved_amount,
+      SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid_amount,
+      SUM(CASE WHEN is_billable = 1 THEN amount ELSE 0 END) as billable_amount,
+      SUM(CASE WHEN is_reimbursable = 1 AND reimbursed = 0 THEN amount ELSE 0 END) as pending_reimbursement
+    FROM expenses WHERE 1=1
+  `;
+  const params = [];
+  
+  if (start_date) {
+    sql += ' AND expense_date >= ?';
+    params.push(start_date);
+  }
+  if (end_date) {
+    sql += ' AND expense_date <= ?';
+    params.push(end_date);
+  }
+  
+  const stats = row(sql, params);
+  res.json(stats);
+});
+
+app.get('/api/expenses/stats/by-category', (req, res) => {
+  const { start_date, end_date } = req.query;
+  let sql = `
+    SELECT ec.name, ec.icon, ec.budget_limit,
+           SUM(e.amount) as total_spent,
+           COUNT(e.id) as expense_count
+    FROM expense_categories ec
+    LEFT JOIN expenses e ON ec.id = e.category_id
+  `;
+  const params = [];
+  
+  if (start_date || end_date) {
+    sql += ' WHERE 1=1';
+    if (start_date) {
+      sql += ' AND e.expense_date >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      sql += ' AND e.expense_date <= ?';
+      params.push(end_date);
+    }
+  }
+  
+  sql += ' GROUP BY ec.id ORDER BY total_spent DESC';
+  
+  const stats = all(sql, params);
+  res.json(stats);
+});
+
+// Expense Budgets
+app.get('/api/expense-budgets', (req, res) => {
+  const rows = all(`
+    SELECT eb.*, ec.name as category_name, p.name as project_name
+    FROM expense_budgets eb
+    LEFT JOIN expense_categories ec ON eb.category_id = ec.id
+    LEFT JOIN projects p ON eb.project_id = p.id
+    ORDER BY eb.period_start DESC
+  `);
+  res.json(rows);
+});
+
+app.post('/api/expense-budgets', (req, res) => {
+  const { category_id, project_id, budget_amount, period_type, period_start, period_end, notes } = req.body;
+  const result = run(
+    'INSERT INTO expense_budgets (category_id, project_id, budget_amount, period_type, period_start, period_end, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [category_id, project_id, budget_amount, period_type, period_start, period_end, notes]
+  );
+  res.json({ id: result.lastInsertRowid });
+});
+
+app.put('/api/expense-budgets/:id', (req, res) => {
+  const { budget_amount, spent_amount, notes } = req.body;
+  run(
+    'UPDATE expense_budgets SET budget_amount = ?, spent_amount = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+    [budget_amount, spent_amount, notes, req.params.id]
+  );
+  res.json({ success: true });
+});
+
+app.delete('/api/expense-budgets/:id', (req, res) => {
+  run('DELETE FROM expense_budgets WHERE id = ?', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ============================================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
