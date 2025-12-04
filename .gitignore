@@ -2,6 +2,9 @@
 node_modules/
 package-lock.json
 
+# Inspiration folder (do not commit)
+worksuite-saas-new-5.5.10/
+
 # Database
 data/*.db
 data/*.db-shm
