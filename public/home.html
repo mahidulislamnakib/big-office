@@ -313,15 +313,107 @@
     
     /* Footer */
     .footer {
-      background: #2c3e50;
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
       color: white;
-      padding: 40px 24px;
+      padding: 30px 24px;
       text-align: center;
     }
     
     .footer p {
       margin: 8px 0;
+    }
+
+    .footer a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .footer a:hover {
       opacity: 0.8;
+      text-decoration: underline;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .navbar {
+        padding: 0 16px;
+        height: 56px;
+      }
+
+      .navbar-left {
+        gap: 16px;
+      }
+
+      .nav-menu {
+        display: none;
+      }
+
+      .hero {
+        padding: 60px 20px;
+      }
+
+      .hero-title {
+        font-size: 32px;
+      }
+
+      .hero-description {
+        font-size: 16px;
+      }
+
+      .features-section {
+        padding: 40px 20px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .quick-links-section {
+        padding: 40px 20px;
+      }
+
+      .quick-links {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .navbar {
+        padding: 0 12px;
+        height: 52px;
+      }
+
+      .logo {
+        font-size: 16px;
+      }
+
+      .hero {
+        padding: 40px 16px;
+      }
+
+      .hero-title {
+        font-size: 26px;
+      }
+
+      .hero-description {
+        font-size: 14px;
+      }
+
+      .btn-primary {
+        padding: 12px 24px;
+        font-size: 14px;
+      }
+
+      .quick-links {
+        grid-template-columns: 1fr;
+      }
+
+      .feature-card {
+        padding: 20px;
+      }
     }
   </style>
 </head>
@@ -494,7 +586,7 @@
   <!-- Footer -->
   <footer class="footer">
     <p><strong>Big Office</strong> - Tender Management System</p>
-    <p>&copy; 2025 Big Office. All rights reserved.</p>
+    <p>Developed with ❤️ by <a href="https://mahidulislamnakib.com" target="_blank" rel="noopener">Nakib</a></p>
   </footer>
   
   <script>
