@@ -2585,7 +2585,7 @@ const app = {
   },
 
   async loadExpenseStats() {
-    const res = await fetch(`${API}/expenses/statistics/summary`);
+    const res = await fetch(`${API}/expenses/stats/summary`);
     const stats = await res.json();
     
     const html = `
