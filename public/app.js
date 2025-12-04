@@ -227,6 +227,7 @@ const app = {
             <td>${f.mobile || f.phone || '-'}</td>
             <td><span class="badge badge-${f.status === 'active' ? 'success' : 'secondary'}">${f.status}</span></td>
             <td class="action-buttons">
+              <button class="btn btn-sm btn-info" onclick="app.viewFirmDashboard(${f.id})" title="View Dashboard">📊 View</button>
               <button class="btn btn-sm btn-primary" onclick="app.editItem('firm', ${f.id})">Edit</button>
               ${currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="app.deleteItem('firm', ${f.id})">Delete</button>` : ''}
             </td>
@@ -236,6 +237,435 @@ const app = {
       }
     } catch (err) {
       console.error('Firms error:', err);
+    }
+  },
+
+  currentFirmId: null,
+  currentFirmDashboardData: null,
+
+  async viewFirmDashboard(firmId) {
+    try {
+      this.currentFirmId = firmId;
+      
+      // Hide firms page, show dashboard
+      document.getElementById('firms').style.display = 'none';
+      document.getElementById('firm-dashboard').style.display = 'block';
+      
+      // Load dashboard data
+      const res = await fetch(`${API}/firms/${firmId}/dashboard`);
+      const data = await res.json();
+      this.currentFirmDashboardData = data;
+      
+      // Update title
+      document.getElementById('firm-dashboard-title').textContent = `${data.firm.name} - Dashboard`;
+      
+      // Display firm info
+      const firmInfo = document.getElementById('firm-info-display');
+      firmInfo.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+          <div><strong>Business Type:</strong> ${data.firm.business_type || '-'}</div>
+          <div><strong>TIN:</strong> ${data.firm.tin || '-'}</div>
+          <div><strong>BIN:</strong> ${data.firm.bin || '-'}</div>
+          <div><strong>Contact:</strong> ${data.firm.mobile || data.firm.phone || '-'}</div>
+          <div><strong>Email:</strong> ${data.firm.email || '-'}</div>
+          <div><strong>Address:</strong> ${data.firm.address || '-'}</div>
+          <div><strong>Established:</strong> ${data.firm.established_date || '-'}</div>
+          <div><strong>Status:</strong> <span class="badge badge-${data.firm.status === 'active' ? 'success' : 'secondary'}">${data.firm.status}</span></div>
+        </div>
+      `;
+      
+      // Update statistics
+      document.getElementById('total-docs-count').textContent = data.stats.totalDocs;
+      document.getElementById('expired-docs-count').textContent = data.stats.expiredDocs;
+      document.getElementById('expiring-docs-count').textContent = data.stats.expiringDocs;
+      document.getElementById('active-tenders-count').textContent = data.activeTenders.length;
+      
+      // Show expiring documents alert
+      if (data.expiringDocuments.length > 0) {
+        const alertDiv = document.getElementById('expiring-docs-alert');
+        alertDiv.innerHTML = `
+          <div class="alert alert-warning">
+            <strong>⚠️ ${data.expiringDocuments.length} documents expiring soon!</strong>
+            <ul style="margin: 10px 0 0 20px;">
+              ${data.expiringDocuments.map(doc => `
+                <li>${doc.document_name} - Expires: ${doc.expiry_date}</li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+      } else {
+        document.getElementById('expiring-docs-alert').innerHTML = '';
+      }
+      
+      // Load documents
+      await this.loadFirmDocuments();
+      
+      // Load other data
+      this.populateFirmLicenses(data.licenses);
+      this.populateFirmEnlistments(data.enlistments);
+      this.populateFirmBankAccounts(data.bankAccounts);
+      this.populateFirmBankGuarantees(data.bankGuarantees);
+      this.populateFirmTenders(data.activeTenders);
+      this.populateFirmProjects(data.activeProjects);
+      
+    } catch (err) {
+      console.error('Dashboard error:', err);
+      alert('Failed to load firm dashboard');
+    }
+  },
+
+  goBackToFirms() {
+    document.getElementById('firm-dashboard').style.display = 'none';
+    document.getElementById('firms').style.display = 'block';
+    this.currentFirmId = null;
+    this.currentFirmDashboardData = null;
+  },
+
+  switchFirmTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.firm-tab-content').forEach(tab => {
+      tab.style.display = 'none';
+    });
+    
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(`firm-tab-${tabName}`).style.display = 'block';
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+  },
+
+  async loadFirmDocuments() {
+    try {
+      const res = await fetch(`${API}/firms/${this.currentFirmId}/documents`);
+      const documents = await res.json();
+      
+      const list = document.getElementById('firm-documents-list');
+      if (documents.length === 0) {
+        list.innerHTML = '<tr><td colspan="7" class="empty-state">No documents yet. Add your first document!</td></tr>';
+      } else {
+        list.innerHTML = documents.map(doc => {
+          const today = new Date().toISOString().split('T')[0];
+          let statusBadge = 'active';
+          let statusText = 'Active';
+          
+          if (doc.has_expiry && doc.expiry_date) {
+            if (doc.expiry_date < today) {
+              statusBadge = 'expired';
+              statusText = 'Expired';
+            } else if (doc.expiry_date <= new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0]) {
+              statusBadge = 'expiring';
+              statusText = 'Expiring Soon';
+            }
+          }
+          
+          return `
+          <tr>
+            <td><span class="doc-type-badge">${doc.document_type.replace(/_/g, ' ')}</span></td>
+            <td><strong>${doc.document_name}</strong></td>
+            <td>${doc.document_number || '-'}</td>
+            <td>${doc.issue_date || '-'}</td>
+            <td>${doc.has_expiry ? (doc.expiry_date || '-') : 'N/A'}</td>
+            <td><span class="badge status-${statusBadge}">${statusText}</span></td>
+            <td class="action-buttons">
+              <button class="btn btn-sm btn-primary" onclick="app.editFirmDocument(${doc.id})" title="Edit">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="app.deleteFirmDocument(${doc.id})" title="Delete">🗑️</button>
+            </td>
+          </tr>
+          `;
+        }).join('');
+      }
+    } catch (err) {
+      console.error('Documents error:', err);
+    }
+  },
+
+  filterFirmDocuments() {
+    const typeFilter = document.getElementById('doc-type-filter').value;
+    const rows = document.querySelectorAll('#firm-documents-list tr');
+    
+    rows.forEach(row => {
+      if (!typeFilter) {
+        row.style.display = '';
+      } else {
+        const typeBadge = row.querySelector('.doc-type-badge');
+        if (typeBadge && typeBadge.textContent.toLowerCase().replace(/ /g, '_').includes(typeFilter)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+    });
+  },
+
+  openFirmDocumentModal(docId = null) {
+    // Create a modal for adding/editing documents
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    
+    modalTitle.textContent = docId ? 'Edit Document' : 'Add New Document';
+    
+    modalBody.innerHTML = `
+      <form id="firm-document-form" onsubmit="app.saveFirmDocument(event, ${docId})">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Document Type *</label>
+            <select name="document_type" required>
+              <option value="">Select Type</option>
+              <option value="trade_license">Trade License</option>
+              <option value="tin_certificate">TIN Certificate</option>
+              <option value="vat_certificate">VAT Certificate</option>
+              <option value="enlistment">Enlistment Certificate</option>
+              <option value="bank_statement">Bank Statement</option>
+              <option value="project_completion">Project Completion Certificate</option>
+              <option value="financial_statement">Financial Statement</option>
+              <option value="incorporation">Incorporation Certificate</option>
+              <option value="moa">Memorandum of Association (MOA)</option>
+              <option value="aoa">Articles of Association (AOA)</option>
+              <option value="partnership_deed">Partnership Deed</option>
+              <option value="form_12">Form XII</option>
+              <option value="board_resolution">Board Resolution</option>
+              <option value="audit_report">Audit Report</option>
+              <option value="balance_sheet">Balance Sheet</option>
+              <option value="certificate">Certificate</option>
+              <option value="contract">Contract</option>
+              <option value="agreement">Agreement</option>
+              <option value="misc">Miscellaneous</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Document Name *</label>
+            <input type="text" name="document_name" required>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Document Number</label>
+            <input type="text" name="document_number">
+          </div>
+          <div class="form-group">
+            <label>Issuing Authority</label>
+            <input type="text" name="issuing_authority">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Issue Date</label>
+            <input type="date" name="issue_date">
+          </div>
+          <div class="form-group">
+            <label>Has Expiry?</label>
+            <select name="has_expiry" onchange="app.toggleExpiryFields(this)">
+              <option value="0">No</option>
+              <option value="1">Yes</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row" id="expiry-fields" style="display: none;">
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <input type="date" name="expiry_date">
+          </div>
+          <div class="form-group">
+            <label>Reminder Days Before Expiry</label>
+            <input type="number" name="reminder_days" value="30">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>File Path (Optional)</label>
+          <input type="text" name="file_path" placeholder="/path/to/document.pdf">
+        </div>
+        
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea name="notes" rows="2"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Document</button>
+        </div>
+      </form>
+    `;
+    
+    modal.style.display = 'block';
+  },
+
+  toggleExpiryFields(select) {
+    const expiryFields = document.getElementById('expiry-fields');
+    if (select.value === '1') {
+      expiryFields.style.display = 'flex';
+    } else {
+      expiryFields.style.display = 'none';
+    }
+  },
+
+  async saveFirmDocument(event, docId = null) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = this.getFormData(form);
+    formData.firm_id = this.currentFirmId;
+    
+    try {
+      const url = docId 
+        ? `${API}/firms/${this.currentFirmId}/documents/${docId}`
+        : `${API}/firms/${this.currentFirmId}/documents`;
+      
+      const method = docId ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (res.ok) {
+        this.closeModal();
+        await this.loadFirmDocuments();
+        // Refresh dashboard data
+        await this.viewFirmDashboard(this.currentFirmId);
+      }
+    } catch (err) {
+      console.error('Save document error:', err);
+      alert('Failed to save document');
+    }
+  },
+
+  async editFirmDocument(docId) {
+    // TODO: Load document data and populate modal
+    this.openFirmDocumentModal(docId);
+  },
+
+  async deleteFirmDocument(docId) {
+    if (!confirm('Delete this document?')) return;
+    
+    try {
+      const res = await fetch(`${API}/firms/${this.currentFirmId}/documents/${docId}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        await this.loadFirmDocuments();
+        await this.viewFirmDashboard(this.currentFirmId);
+      }
+    } catch (err) {
+      console.error('Delete document error:', err);
+      alert('Failed to delete document');
+    }
+  },
+
+  populateFirmLicenses(licenses) {
+    const list = document.getElementById('firm-licenses-list');
+    if (licenses.length === 0) {
+      list.innerHTML = '<tr><td colspan="5" class="empty-state">No licenses found</td></tr>';
+    } else {
+      list.innerHTML = licenses.map(lic => `
+        <tr>
+          <td>${lic.license_type.replace(/_/g, ' ')}</td>
+          <td>${lic.license_number || '-'}</td>
+          <td>${lic.issue_date || '-'}</td>
+          <td>${lic.expiry_date || '-'}</td>
+          <td><span class="badge badge-${lic.status === 'active' ? 'success' : 'secondary'}">${lic.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  },
+
+  populateFirmEnlistments(enlistments) {
+    const list = document.getElementById('firm-enlistments-list');
+    if (enlistments.length === 0) {
+      list.innerHTML = '<tr><td colspan="5" class="empty-state">No enlistments found</td></tr>';
+    } else {
+      list.innerHTML = enlistments.map(enl => `
+        <tr>
+          <td>${enl.authority}</td>
+          <td>${enl.category || '-'}</td>
+          <td>${enl.enlistment_number || '-'}</td>
+          <td>${enl.expiry_date || '-'}</td>
+          <td><span class="badge badge-${enl.status === 'active' ? 'success' : 'secondary'}">${enl.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  },
+
+  populateFirmBankAccounts(accounts) {
+    const list = document.getElementById('firm-bank-accounts-list');
+    if (accounts.length === 0) {
+      list.innerHTML = '<tr><td colspan="5" class="empty-state">No bank accounts found</td></tr>';
+    } else {
+      list.innerHTML = accounts.map(acc => `
+        <tr>
+          <td>${acc.bank_name}</td>
+          <td>${acc.account_number}</td>
+          <td>${acc.account_type || '-'}</td>
+          <td>${acc.balance ? '৳ ' + acc.balance.toLocaleString() : '-'}</td>
+          <td><span class="badge badge-${acc.status === 'active' ? 'success' : 'secondary'}">${acc.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  },
+
+  populateFirmBankGuarantees(guarantees) {
+    const list = document.getElementById('firm-bank-guarantees-list');
+    if (guarantees.length === 0) {
+      list.innerHTML = '<tr><td colspan="6" class="empty-state">No bank guarantees found</td></tr>';
+    } else {
+      list.innerHTML = guarantees.map(bg => `
+        <tr>
+          <td>${bg.bg_type.replace(/_/g, ' ')}</td>
+          <td>${bg.bank_name}</td>
+          <td>${bg.bg_number || '-'}</td>
+          <td>৳ ${bg.amount.toLocaleString()}</td>
+          <td>${bg.expiry_date}</td>
+          <td><span class="badge badge-${bg.status === 'active' ? 'success' : 'secondary'}">${bg.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  },
+
+  populateFirmTenders(tenders) {
+    const list = document.getElementById('firm-tenders-list');
+    if (tenders.length === 0) {
+      list.innerHTML = '<tr><td colspan="5" class="empty-state">No active tenders found</td></tr>';
+    } else {
+      list.innerHTML = tenders.map(t => `
+        <tr>
+          <td>${t.tender_id}</td>
+          <td>${t.procuring_entity}</td>
+          <td>${t.package_name}</td>
+          <td>${t.submission_date}</td>
+          <td><span class="badge badge-info">${t.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  },
+
+  populateFirmProjects(projects) {
+    const list = document.getElementById('firm-projects-list');
+    if (projects.length === 0) {
+      list.innerHTML = '<tr><td colspan="5" class="empty-state">No active projects found</td></tr>';
+    } else {
+      list.innerHTML = projects.map(p => `
+        <tr>
+          <td>${p.project_name}</td>
+          <td>${p.client_name}</td>
+          <td>৳ ${p.project_value ? p.project_value.toLocaleString() : '-'}</td>
+          <td>${p.start_date}</td>
+          <td><span class="badge badge-info">${p.status}</span></td>
+        </tr>
+      `).join('');
     }
   },
 

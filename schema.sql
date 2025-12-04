@@ -868,3 +868,38 @@ CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
 CREATE INDEX IF NOT EXISTS idx_expense_budgets_category ON expense_budgets(category_id);
 CREATE INDEX IF NOT EXISTS idx_expense_budgets_project ON expense_budgets(project_id);
 
+-- ============================================
+-- FIRM DOCUMENTS MANAGEMENT
+-- ============================================
+CREATE TABLE IF NOT EXISTS firm_documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  firm_id INTEGER NOT NULL,
+  document_type TEXT NOT NULL, -- trade_license, tin_certificate, vat_certificate, enlistment, bank_statement, project_completion, financial_statement, moa, aoa, incorporation, partnership_deed, form_12, board_resolution, audit_report, balance_sheet, certificate, contract, agreement, misc
+  document_name TEXT NOT NULL,
+  document_number TEXT,
+  description TEXT,
+  issue_date TEXT,
+  expiry_date TEXT, -- NULL for non-expiring documents
+  issuing_authority TEXT,
+  file_path TEXT, -- Path to uploaded file
+  file_type TEXT, -- pdf, jpg, png, doc, xlsx
+  file_size INTEGER, -- in bytes
+  status TEXT DEFAULT 'active', -- active, expired, renewed, cancelled
+  has_expiry BOOLEAN DEFAULT 0, -- 0 = no expiry, 1 = has expiry
+  reminder_days INTEGER DEFAULT 30, -- Days before expiry to send reminder
+  uploaded_by INTEGER,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (firm_id) REFERENCES firms(id) ON DELETE CASCADE,
+  FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Indexes for firm documents
+CREATE INDEX IF NOT EXISTS idx_firm_documents_firm ON firm_documents(firm_id);
+CREATE INDEX IF NOT EXISTS idx_firm_documents_type ON firm_documents(document_type);
+CREATE INDEX IF NOT EXISTS idx_firm_documents_status ON firm_documents(status);
+CREATE INDEX IF NOT EXISTS idx_firm_documents_expiry ON firm_documents(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_firm_documents_has_expiry ON firm_documents(has_expiry);
+
+

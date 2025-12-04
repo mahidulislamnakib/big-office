@@ -2036,6 +2036,182 @@ app.delete('/api/generated-letters/:id', (req, res) => {
 });
 
 // ============================================
+// FIRM DOCUMENTS MANAGEMENT
+// ============================================
+
+// Get all documents for a firm
+app.get('/api/firms/:firmId/documents', (req, res) => {
+  try {
+    const documents = rows(
+      'SELECT * FROM firm_documents WHERE firm_id = ? ORDER BY created_at DESC',
+      [req.params.firmId]
+    );
+    res.json(documents);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get firm dashboard data
+app.get('/api/firms/:firmId/dashboard', (req, res) => {
+  try {
+    const firmId = req.params.firmId;
+    
+    // Get firm details
+    const firm = row('SELECT * FROM firms WHERE id = ?', [firmId]);
+    if (!firm) return res.status(404).json({ error: 'Firm not found' });
+    
+    // Get document statistics
+    const totalDocs = row('SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ?', [firmId]).count;
+    const expiredDocs = row(
+      'SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date < date("now") AND status = "active"',
+      [firmId]
+    ).count;
+    const expiringDocs = row(
+      'SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date BETWEEN date("now") AND date("now", "+30 days") AND status = "active"',
+      [firmId]
+    ).count;
+    
+    // Get documents by type
+    const docsByType = rows(
+      'SELECT document_type, COUNT(*) as count FROM firm_documents WHERE firm_id = ? GROUP BY document_type',
+      [firmId]
+    );
+    
+    // Get expiring documents
+    const expiringDocuments = rows(
+      'SELECT * FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date BETWEEN date("now") AND date("now", "+60 days") AND status = "active" ORDER BY expiry_date',
+      [firmId]
+    );
+    
+    // Get recent documents
+    const recentDocuments = rows(
+      'SELECT * FROM firm_documents WHERE firm_id = ? ORDER BY created_at DESC LIMIT 10',
+      [firmId]
+    );
+    
+    // Get licenses
+    const licenses = rows('SELECT * FROM licenses WHERE firm_id = ? ORDER BY expiry_date', [firmId]);
+    
+    // Get enlistments
+    const enlistments = rows('SELECT * FROM enlistments WHERE firm_id = ? ORDER BY expiry_date', [firmId]);
+    
+    // Get bank accounts
+    const bankAccounts = rows('SELECT * FROM bank_accounts WHERE firm_id = ?', [firmId]);
+    
+    // Get bank guarantees
+    const bankGuarantees = rows('SELECT * FROM bank_guarantees WHERE firm_id = ? ORDER BY expiry_date', [firmId]);
+    
+    // Get active tenders
+    const activeTenders = rows(
+      'SELECT * FROM tenders WHERE firm_id = ? AND status IN ("open", "submitted", "under_evaluation") ORDER BY submission_date',
+      [firmId]
+    );
+    
+    // Get active projects
+    const activeProjects = rows(
+      'SELECT * FROM projects WHERE firm_id = ? AND status IN ("active", "on_hold") ORDER BY start_date DESC',
+      [firmId]
+    );
+    
+    res.json({
+      firm,
+      stats: {
+        totalDocs,
+        expiredDocs,
+        expiringDocs,
+        docsByType
+      },
+      expiringDocuments,
+      recentDocuments,
+      licenses,
+      enlistments,
+      bankAccounts,
+      bankGuarantees,
+      activeTenders,
+      activeProjects
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Add new document
+app.post('/api/firms/:firmId/documents', (req, res) => {
+  try {
+    const { firmId } = req.params;
+    const {
+      document_type, document_name, document_number, description,
+      issue_date, expiry_date, issuing_authority, file_path,
+      file_type, file_size, has_expiry, reminder_days, notes
+    } = req.body;
+    
+    const result = run(
+      `INSERT INTO firm_documents (
+        firm_id, document_type, document_name, document_number, description,
+        issue_date, expiry_date, issuing_authority, file_path, file_type,
+        file_size, has_expiry, reminder_days, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        firmId, document_type, document_name, document_number, description,
+        issue_date, expiry_date, issuing_authority, file_path, file_type,
+        file_size, has_expiry || 0, reminder_days || 30, notes
+      ]
+    );
+    
+    res.json({ id: result.lastInsertRowid, success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Update document
+app.put('/api/firms/:firmId/documents/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      document_type, document_name, document_number, description,
+      issue_date, expiry_date, issuing_authority, file_path,
+      file_type, file_size, status, has_expiry, reminder_days, notes
+    } = req.body;
+    
+    run(
+      `UPDATE firm_documents SET
+        document_type = ?, document_name = ?, document_number = ?, description = ?,
+        issue_date = ?, expiry_date = ?, issuing_authority = ?, file_path = ?,
+        file_type = ?, file_size = ?, status = ?, has_expiry = ?, reminder_days = ?,
+        notes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+      [
+        document_type, document_name, document_number, description,
+        issue_date, expiry_date, issuing_authority, file_path,
+        file_type, file_size, status, has_expiry || 0, reminder_days || 30,
+        notes, id
+      ]
+    );
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Delete document
+app.delete('/api/firms/:firmId/documents/:id', (req, res) => {
+  try {
+    run('DELETE FROM firm_documents WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// ============================================
 // EXPENSE MANAGER API
 // ============================================
 

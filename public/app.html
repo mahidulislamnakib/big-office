@@ -692,6 +692,64 @@
         font-size: 18px;
       }
     }
+
+    /* Tab Buttons */
+    .tab-btn {
+      padding: 12px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #666;
+      font-size: 15px;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+      background: rgba(44, 122, 58, 0.05);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(44, 122, 58, 0.05);
+    }
+
+    .firm-tab-content {
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .doc-type-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .status-expired {
+      background: #ffebee !important;
+      color: #c62828 !important;
+    }
+
+    .status-expiring {
+      background: #fff3e0 !important;
+      color: #ef6c00 !important;
+    }
+
+    .status-active {
+      background: #e8f5e9 !important;
+      color: #2e7d32 !important;
+    }
   </style>
 </head>
 <body>
@@ -866,6 +924,256 @@
               </thead>
               <tbody id="firms-list"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Firm Dashboard -->
+      <div class="page" id="firm-dashboard" style="display: none;">
+        <div class="page-header">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <button class="btn btn-secondary" onclick="app.goBackToFirms()">← Back to Firms</button>
+            <h1 class="page-title" id="firm-dashboard-title">Firm Dashboard</h1>
+          </div>
+          <button class="btn btn-primary" onclick="app.openFirmDocumentModal()">+ Add Document</button>
+        </div>
+
+        <!-- Firm Info Card -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3 class="card-title">Firm Information</h3>
+            <button class="btn btn-sm btn-secondary" onclick="app.editFirm()">Edit</button>
+          </div>
+          <div class="card-body" id="firm-info-display"></div>
+        </div>
+
+        <!-- Document Statistics -->
+        <div class="stats-grid" style="margin-bottom: 24px;">
+          <div class="stat-card">
+            <div class="stat-icon">📄</div>
+            <div class="stat-info">
+              <div class="stat-label">Total Documents</div>
+              <div class="stat-number" id="total-docs-count">0</div>
+            </div>
+          </div>
+          <div class="stat-card" style="border-color: var(--danger);">
+            <div class="stat-icon" style="background: rgba(220,53,69,0.1); color: var(--danger);">⚠️</div>
+            <div class="stat-info">
+              <div class="stat-label">Expired</div>
+              <div class="stat-number" style="color: var(--danger);" id="expired-docs-count">0</div>
+            </div>
+          </div>
+          <div class="stat-card" style="border-color: var(--warning);">
+            <div class="stat-icon" style="background: rgba(255,193,7,0.1); color: var(--warning);">⏰</div>
+            <div class="stat-info">
+              <div class="stat-label">Expiring Soon</div>
+              <div class="stat-number" style="color: var(--warning);" id="expiring-docs-count">0</div>
+            </div>
+          </div>
+          <div class="stat-card" style="border-color: var(--info);">
+            <div class="stat-icon" style="background: rgba(23,162,184,0.1); color: var(--info);">💼</div>
+            <div class="stat-info">
+              <div class="stat-label">Active Tenders</div>
+              <div class="stat-number" style="color: var(--info);" id="active-tenders-count">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs for different sections -->
+        <div style="border-bottom: 2px solid #e0e0e0; margin-bottom: 20px;">
+          <div style="display: flex; gap: 20px;">
+            <button class="tab-btn active" onclick="app.switchFirmTab('documents')" id="tab-documents">
+              📁 Documents
+            </button>
+            <button class="tab-btn" onclick="app.switchFirmTab('licenses')" id="tab-licenses">
+              📋 Licenses & Enlistments
+            </button>
+            <button class="tab-btn" onclick="app.switchFirmTab('banking')" id="tab-banking">
+              🏦 Banking
+            </button>
+            <button class="tab-btn" onclick="app.switchFirmTab('projects')" id="tab-projects">
+              🏗️ Projects & Tenders
+            </button>
+          </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div class="firm-tab-content" id="firm-tab-documents">
+          <!-- Expiring Documents Alert -->
+          <div id="expiring-docs-alert" style="margin-bottom: 20px;"></div>
+
+          <!-- Documents by Type -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">All Documents</h3>
+              <div style="display: flex; gap: 8px;">
+                <select id="doc-type-filter" onchange="app.filterFirmDocuments()" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px;">
+                  <option value="">All Types</option>
+                  <option value="trade_license">Trade License</option>
+                  <option value="tin_certificate">TIN Certificate</option>
+                  <option value="vat_certificate">VAT Certificate</option>
+                  <option value="enlistment">Enlistment</option>
+                  <option value="bank_statement">Bank Statement</option>
+                  <option value="project_completion">Project Completion</option>
+                  <option value="financial_statement">Financial Statement</option>
+                  <option value="incorporation">Incorporation Certificate</option>
+                  <option value="moa">MOA</option>
+                  <option value="aoa">AOA</option>
+                  <option value="partnership_deed">Partnership Deed</option>
+                  <option value="audit_report">Audit Report</option>
+                  <option value="certificate">Certificate</option>
+                  <option value="contract">Contract</option>
+                  <option value="agreement">Agreement</option>
+                  <option value="misc">Miscellaneous</option>
+                </select>
+              </div>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Document Name</th>
+                    <th>Number</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-documents-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Licenses Tab -->
+        <div class="firm-tab-content" id="firm-tab-licenses" style="display: none;">
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+              <h3 class="card-title">Licenses & Registrations</h3>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Number</th>
+                    <th>Issue Date</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-licenses-list"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Enlistments</h3>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Authority</th>
+                    <th>Category</th>
+                    <th>Number</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-enlistments-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banking Tab -->
+        <div class="firm-tab-content" id="firm-tab-banking" style="display: none;">
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+              <h3 class="card-title">Bank Accounts</h3>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Bank</th>
+                    <th>Account Number</th>
+                    <th>Type</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-bank-accounts-list"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Bank Guarantees</h3>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>BG Type</th>
+                    <th>Bank</th>
+                    <th>BG Number</th>
+                    <th>Amount</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-bank-guarantees-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Projects Tab -->
+        <div class="firm-tab-content" id="firm-tab-projects" style="display: none;">
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+              <h3 class="card-title">Active Tenders</h3>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tender ID</th>
+                    <th>Procuring Entity</th>
+                    <th>Package Name</th>
+                    <th>Submission Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-tenders-list"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Active Projects</h3>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Project Name</th>
+                    <th>Client</th>
+                    <th>Value</th>
+                    <th>Start Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="firm-projects-list"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
