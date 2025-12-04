@@ -644,8 +644,8 @@ const app = {
         <tr>
           <td>${t.tender_id}</td>
           <td>${t.procuring_entity}</td>
-          <td>${t.package_name}</td>
-          <td>${t.submission_date}</td>
+          <td>${t.briefDesc || t.itemDesc || '-'}</td>
+          <td>${t.lastSubmission || '-'}</td>
           <td><span class="badge badge-info">${t.status}</span></td>
         </tr>
       `).join('');
@@ -660,9 +660,9 @@ const app = {
       list.innerHTML = projects.map(p => `
         <tr>
           <td>${p.project_name}</td>
-          <td>${p.client_name}</td>
-          <td>৳ ${p.project_value ? p.project_value.toLocaleString() : '-'}</td>
-          <td>${p.start_date}</td>
+          <td>${p.procuring_entity || '-'}</td>
+          <td>৳ ${p.contract_value ? p.contract_value.toLocaleString() : '-'}</td>
+          <td>${p.commencement_date || '-'}</td>
           <td><span class="badge badge-info">${p.status}</span></td>
         </tr>
       `).join('');

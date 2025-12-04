@@ -2105,13 +2105,13 @@ app.get('/api/firms/:firmId/dashboard', (req, res) => {
     
     // Get active tenders
     const activeTenders = rows(
-      "SELECT * FROM tenders WHERE firm_id = ? AND status IN ('open', 'submitted', 'under_evaluation') ORDER BY submission_date",
+      "SELECT * FROM tenders WHERE assigned_firm_id = ? AND status IN ('open', 'submitted', 'under_evaluation') ORDER BY lastSubmission",
       [firmId]
     );
     
     // Get active projects
     const activeProjects = rows(
-      "SELECT * FROM projects WHERE firm_id = ? AND status IN ('active', 'on_hold') ORDER BY start_date DESC",
+      "SELECT * FROM projects WHERE firm_id = ? AND status IN ('ongoing', 'suspended') ORDER BY commencement_date DESC",
       [firmId]
     );
     
