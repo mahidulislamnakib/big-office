@@ -47,3 +47,6 @@ temp/
 *.pem
 *.key
 *.crt
+
+# Inspiration folders
+worksuite-saas-new-5.5.10/
