@@ -2065,11 +2065,11 @@ app.get('/api/firms/:firmId/dashboard', (req, res) => {
     // Get document statistics
     const totalDocs = row('SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ?', [firmId]).count;
     const expiredDocs = row(
-      'SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date < date("now") AND status = "active"',
+      "SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date < date('now') AND status = 'active'",
       [firmId]
     ).count;
     const expiringDocs = row(
-      'SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date BETWEEN date("now") AND date("now", "+30 days") AND status = "active"',
+      "SELECT COUNT(*) as count FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date BETWEEN date('now') AND date('now', '+30 days') AND status = 'active'",
       [firmId]
     ).count;
     
@@ -2081,7 +2081,7 @@ app.get('/api/firms/:firmId/dashboard', (req, res) => {
     
     // Get expiring documents
     const expiringDocuments = rows(
-      'SELECT * FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date BETWEEN date("now") AND date("now", "+60 days") AND status = "active" ORDER BY expiry_date',
+      "SELECT * FROM firm_documents WHERE firm_id = ? AND has_expiry = 1 AND expiry_date BETWEEN date('now') AND date('now', '+60 days') AND status = 'active' ORDER BY expiry_date",
       [firmId]
     );
     
@@ -2105,13 +2105,13 @@ app.get('/api/firms/:firmId/dashboard', (req, res) => {
     
     // Get active tenders
     const activeTenders = rows(
-      'SELECT * FROM tenders WHERE firm_id = ? AND status IN ("open", "submitted", "under_evaluation") ORDER BY submission_date',
+      "SELECT * FROM tenders WHERE firm_id = ? AND status IN ('open', 'submitted', 'under_evaluation') ORDER BY submission_date",
       [firmId]
     );
     
     // Get active projects
     const activeProjects = rows(
-      'SELECT * FROM projects WHERE firm_id = ? AND status IN ("active", "on_hold") ORDER BY start_date DESC',
+      "SELECT * FROM projects WHERE firm_id = ? AND status IN ('active', 'on_hold') ORDER BY start_date DESC",
       [firmId]
     );
     
