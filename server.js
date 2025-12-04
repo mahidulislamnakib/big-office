@@ -2264,15 +2264,47 @@ app.post('/api/firms/:firmId/documents', uploadDocument.single('document_file'),
   }
 });
 
+// Get single document details
+app.get('/api/firms/:firmId/documents/:id', (req, res) => {
+  try {
+    const doc = row('SELECT * FROM firm_documents WHERE id = ?', [req.params.id]);
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    res.json(doc);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
 // Update document
-app.put('/api/firms/:firmId/documents/:id', (req, res) => {
+app.put('/api/firms/:firmId/documents/:id', uploadDocument.single('document_file'), (req, res) => {
   try {
     const { id } = req.params;
     const {
       document_type, document_name, document_number, description,
-      issue_date, expiry_date, issuing_authority, file_path,
-      file_type, file_size, status, has_expiry, reminder_days, notes
+      issue_date, expiry_date, issuing_authority,
+      status, has_expiry, reminder_days, notes
     } = req.body;
+    
+    // Get existing document to check for old file
+    const existingDoc = row('SELECT file_path FROM firm_documents WHERE id = ?', [id]);
+    
+    // Handle file upload
+    let file_path = existingDoc?.file_path || null;
+    let file_type = null;
+    let file_size = null;
+    
+    if (req.file) {
+      // Delete old file if exists
+      if (existingDoc?.file_path && fs.existsSync(existingDoc.file_path)) {
+        fs.unlinkSync(existingDoc.file_path);
+      }
+      file_path = req.file.path;
+      file_type = path.extname(req.file.originalname).substring(1).toLowerCase();
+      file_size = req.file.size;
+    }
     
     run(
       `UPDATE firm_documents SET
@@ -2283,13 +2315,17 @@ app.put('/api/firms/:firmId/documents/:id', (req, res) => {
       WHERE id = ?`,
       [
         document_type, document_name, document_number, description,
-        issue_date, expiry_date, issuing_authority, file_path,
-        file_type, file_size, status, has_expiry || 0, reminder_days || 30,
-        notes, id
+        issue_date || null, expiry_date || null, issuing_authority || null, file_path,
+        file_type, file_size, status || 'active', has_expiry || 0, reminder_days || 30,
+        notes || null, id
       ]
     );
     
-    res.json({ success: true });
+    res.json({ 
+      success: true, 
+      file_uploaded: req.file ? true : false,
+      original_filename: req.file ? req.file.originalname : null
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'DB error' });

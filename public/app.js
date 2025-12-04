@@ -522,17 +522,14 @@ const app = {
     const formData = new FormData(form);
     
     try {
-      const url = `${API}/firms/${this.currentFirmId}/documents`;
+      const url = docId 
+        ? `${API}/firms/${this.currentFirmId}/documents/${docId}`
+        : `${API}/firms/${this.currentFirmId}/documents`;
       
-      // For now, only handle POST (create new document)
-      // TODO: Update PUT endpoint to handle file uploads
-      if (docId) {
-        alert('Editing documents with file uploads will be available soon. Please create a new document.');
-        return;
-      }
+      const method = docId ? 'PUT' : 'POST';
       
       const res = await fetch(url, {
-        method: 'POST',
+        method: method,
         body: formData // Don't set Content-Type header, let browser set it with boundary
       });
       
@@ -544,9 +541,9 @@ const app = {
         await this.viewFirmDashboard(this.currentFirmId);
         
         if (result.file_uploaded) {
-          alert(`Document saved successfully!\nFile: ${result.original_filename}`);
+          alert(`Document ${docId ? 'updated' : 'saved'} successfully!\nFile: ${result.original_filename}`);
         } else {
-          alert('Document saved successfully (no file uploaded).');
+          alert(`Document ${docId ? 'updated' : 'saved'} successfully${docId ? ' (file not changed)' : ' (no file uploaded)'}.`);
         }
       } else {
         const error = await res.json();
@@ -559,8 +556,55 @@ const app = {
   },
 
   async editFirmDocument(docId) {
-    // TODO: Load document data and populate modal
-    this.openFirmDocumentModal(docId);
+    try {
+      // Fetch document details
+      const res = await fetch(`${API}/firms/${this.currentFirmId}/documents/${docId}`);
+      if (!res.ok) throw new Error('Failed to load document');
+      const doc = await res.json();
+      
+      // Open modal first
+      this.openFirmDocumentModal(docId);
+      
+      // Populate form fields
+      setTimeout(() => {
+        const form = document.getElementById('firm-document-form');
+        if (form) {
+          const setField = (name, value) => {
+            const field = form.querySelector(`[name="${name}"]`);
+            if (field && value !== null && value !== undefined) {
+              field.value = value;
+              // Trigger change event for has_expiry to show/hide expiry fields
+              if (name === 'has_expiry') {
+                field.dispatchEvent(new Event('change'));
+              }
+            }
+          };
+          
+          setField('document_type', doc.document_type);
+          setField('document_name', doc.document_name);
+          setField('document_number', doc.document_number);
+          setField('issuing_authority', doc.issuing_authority);
+          setField('issue_date', doc.issue_date);
+          setField('has_expiry', doc.has_expiry || 0);
+          setField('expiry_date', doc.expiry_date);
+          setField('reminder_days', doc.reminder_days || 30);
+          setField('status', doc.status || 'active');
+          setField('description', doc.description);
+          setField('notes', doc.notes);
+          
+          // Show existing file info
+          if (doc.file_path) {
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'alert alert-info';
+            fileInfo.innerHTML = `<strong>Current file:</strong> ${doc.file_path.split('/').pop()} (${doc.file_type || 'unknown'}, ${(doc.file_size / 1024).toFixed(2)} KB)<br><small>Upload a new file to replace it, or leave empty to keep existing file.</small>`;
+            form.insertBefore(fileInfo, form.firstChild);
+          }
+        }
+      }, 100);
+    } catch (err) {
+      console.error('Load document error:', err);
+      alert('Failed to load document: ' + err.message);
+    }
   },
 
   async deleteFirmDocument(docId) {
