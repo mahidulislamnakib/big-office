@@ -537,7 +537,7 @@
 <body>
   <div class="topbar" id="topbar">
     <div class="topbar-left">
-      <div class="logo" onclick="window.location.href='/home.html'">
+      <div class="logo" onclick="window.location.href='/home'">
         🏢 <span>Big Office</span>
       </div>
     </div>
@@ -549,7 +549,7 @@
           <span id="userRole" style="font-size: 11px; opacity: 0.8;"></span>
         </div>
       </div>
-      <a href="/home.html" class="btn-home">🏠 Home</a>
+      <a href="/home" class="btn-home">🏠 Home</a>
       <button class="btn-logout" onclick="handleLogout()">Logout</button>
     </div>
   </div>
@@ -1389,7 +1389,7 @@
   <script>
     // Check authentication
     if (localStorage.getItem('isLoggedIn') !== 'true') {
-      window.location.href = '/login.html';
+      window.location.href = '/login';
     }
     
     // Load user info
@@ -1415,7 +1415,7 @@
       if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
       }
     }
     

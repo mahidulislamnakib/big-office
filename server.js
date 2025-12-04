@@ -20,9 +20,20 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware to handle .html extension removal
+app.use((req, res, next) => {
+  if (req.path.indexOf('.') === -1 && req.path !== '/') {
+    const file = path.join(__dirname, 'public', req.path + '.html');
+    if (fs.existsSync(file)) {
+      return res.sendFile(file);
+    }
+  }
+  next();
+});
+
 // Root redirect to login
 app.get('/', (req, res) => {
-  res.redirect('/login.html');
+  res.redirect('/login');
 });
 
 // Helper functions

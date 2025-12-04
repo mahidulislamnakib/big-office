@@ -335,7 +335,7 @@
       <ul class="nav-links">
         <li><a href="#features">Features</a></li>
         <li><a href="#modules">Modules</a></li>
-        <li><a href="/app.html">Dashboard</a></li>
+        <li><a href="/app">Dashboard</a></li>
       </ul>
     </div>
     <div class="navbar-right">
@@ -352,7 +352,7 @@
     <h1>Welcome to Big Office</h1>
     <p>Complete Tender Management Solution for Construction & Contracting Firms</p>
     <div class="hero-buttons">
-      <a href="/app.html" class="btn btn-primary">Go to Dashboard</a>
+      <a href="/app" class="btn btn-primary">Go to Dashboard</a>
       <a href="#features" class="btn btn-secondary">Learn More</a>
     </div>
   </section>
@@ -425,7 +425,7 @@
   <section class="container" id="modules">
     <h2 class="section-title">Quick Access</h2>
     <div class="quick-links">
-      <a href="/app.html#dashboard" class="quick-link">
+      <a href="/app#dashboard" class="quick-link">
         <div class="quick-link-icon">📊</div>
         <div class="quick-link-text">
           <h4>Dashboard</h4>
@@ -433,7 +433,7 @@
         </div>
       </a>
       
-      <a href="/app.html#firms" class="quick-link">
+      <a href="/app#firms" class="quick-link">
         <div class="quick-link-icon">🏢</div>
         <div class="quick-link-text">
           <h4>Firms</h4>
@@ -441,7 +441,7 @@
         </div>
       </a>
       
-      <a href="/app.html#tenders" class="quick-link">
+      <a href="/app#tenders" class="quick-link">
         <div class="quick-link-icon">📋</div>
         <div class="quick-link-text">
           <h4>Tenders</h4>
@@ -449,7 +449,7 @@
         </div>
       </a>
       
-      <a href="/app.html#projects" class="quick-link">
+      <a href="/app#projects" class="quick-link">
         <div class="quick-link-icon">🏗️</div>
         <div class="quick-link-text">
           <h4>Projects</h4>
@@ -457,7 +457,7 @@
         </div>
       </a>
       
-      <a href="/app.html#team" class="quick-link">
+      <a href="/app#team" class="quick-link">
         <div class="quick-link-icon">👥</div>
         <div class="quick-link-text">
           <h4>Team</h4>
@@ -465,7 +465,7 @@
         </div>
       </a>
       
-      <a href="/app.html#tasks" class="quick-link">
+      <a href="/app#tasks" class="quick-link">
         <div class="quick-link-icon">✅</div>
         <div class="quick-link-text">
           <h4>Tasks</h4>
@@ -473,7 +473,7 @@
         </div>
       </a>
       
-      <a href="/app.html#alerts" class="quick-link">
+      <a href="/app#alerts" class="quick-link">
         <div class="quick-link-icon">🔔</div>
         <div class="quick-link-text">
           <h4>Alerts</h4>
@@ -481,7 +481,7 @@
         </div>
       </a>
       
-      <a href="/app.html#tender-summary" class="quick-link">
+      <a href="/app#tender-summary" class="quick-link">
         <div class="quick-link-icon">📄</div>
         <div class="quick-link-text">
           <h4>Tender Summary</h4>
@@ -500,7 +500,7 @@
   <script>
     // Check authentication
     if (localStorage.getItem('isLoggedIn') !== 'true') {
-      window.location.href = '/login.html';
+      window.location.href = '/login';
     }
     
     // Load user info
@@ -530,7 +530,7 @@
       if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
-        window.location.href = '/login.html';
+        window.location.href = '/login';
       }
     }
     
