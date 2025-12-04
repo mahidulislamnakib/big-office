@@ -370,6 +370,7 @@ const app = {
             <td>${doc.has_expiry ? (doc.expiry_date || '-') : 'N/A'}</td>
             <td><span class="badge status-${statusBadge}">${statusText}</span></td>
             <td class="action-buttons">
+              ${doc.file_path ? `<button class="btn btn-sm btn-info" onclick="app.previewDocument(${doc.id})" title="Preview">👁️</button>` : ''}
               <button class="btn btn-sm btn-primary" onclick="app.editFirmDocument(${doc.id})" title="Edit">✏️</button>
               <button class="btn btn-sm btn-danger" onclick="app.deleteFirmDocument(${doc.id})" title="Delete">🗑️</button>
             </td>
@@ -484,8 +485,9 @@ const app = {
         </div>
         
         <div class="form-group">
-          <label>File Path (Optional)</label>
-          <input type="text" name="file_path" placeholder="/path/to/document.pdf">
+          <label>Upload Document File</label>
+          <input type="file" name="document_file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx,.xls" style="padding:8px; border:1px solid #ddd; border-radius:4px; width:100%;">
+          <small style="color:#666; display:block; margin-top:5px;">Accepted formats: PDF, JPG, PNG, DOC, DOCX, XLSX (Max 10MB)</small>
         </div>
         
         <div class="form-group">
@@ -515,31 +517,44 @@ const app = {
   async saveFirmDocument(event, docId = null) {
     event.preventDefault();
     const form = event.target;
-    const formData = this.getFormData(form);
-    formData.firm_id = this.currentFirmId;
+    
+    // Use FormData to handle file uploads
+    const formData = new FormData(form);
     
     try {
-      const url = docId 
-        ? `${API}/firms/${this.currentFirmId}/documents/${docId}`
-        : `${API}/firms/${this.currentFirmId}/documents`;
+      const url = `${API}/firms/${this.currentFirmId}/documents`;
       
-      const method = docId ? 'PUT' : 'POST';
+      // For now, only handle POST (create new document)
+      // TODO: Update PUT endpoint to handle file uploads
+      if (docId) {
+        alert('Editing documents with file uploads will be available soon. Please create a new document.');
+        return;
+      }
       
       const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        method: 'POST',
+        body: formData // Don't set Content-Type header, let browser set it with boundary
       });
       
       if (res.ok) {
+        const result = await res.json();
         this.closeModal();
         await this.loadFirmDocuments();
         // Refresh dashboard data
         await this.viewFirmDashboard(this.currentFirmId);
+        
+        if (result.file_uploaded) {
+          alert(`Document saved successfully!\nFile: ${result.original_filename}`);
+        } else {
+          alert('Document saved successfully (no file uploaded).');
+        }
+      } else {
+        const error = await res.json();
+        alert(`Failed to save document: ${error.message || error.error}`);
       }
     } catch (err) {
       console.error('Save document error:', err);
-      alert('Failed to save document');
+      alert('Failed to save document: ' + err.message);
     }
   },
 
@@ -563,6 +578,186 @@ const app = {
     } catch (err) {
       console.error('Delete document error:', err);
       alert('Failed to delete document');
+    }
+  },
+
+  // ============================================
+  // DOCUMENT PREVIEW FUNCTIONS
+  // ============================================
+
+  pdfDoc: null,
+  pageNum: 1,
+  pageRendering: false,
+  pageNumPending: null,
+  scale: 1.5,
+  currentDocumentId: null,
+
+  async previewDocument(docId) {
+    try {
+      this.currentDocumentId = docId;
+      
+      // Show modal and loading
+      const modal = document.getElementById('document-preview-modal');
+      const loading = document.getElementById('preview-loading');
+      const controls = document.getElementById('preview-controls');
+      const canvas = document.getElementById('pdf-canvas');
+      const image = document.getElementById('image-preview');
+      const error = document.getElementById('preview-error');
+      
+      modal.style.display = 'block';
+      loading.style.display = 'block';
+      controls.style.display = 'none';
+      canvas.style.display = 'none';
+      image.style.display = 'none';
+      error.style.display = 'none';
+      
+      // Get document info
+      const docRes = await fetch(`${API}/firms/${this.currentFirmId}/documents`);
+      const documents = await docRes.json();
+      const doc = documents.find(d => d.id === docId);
+      
+      if (!doc) {
+        this.showPreviewError('Document not found');
+        return;
+      }
+      
+      if (!doc.file_path) {
+        this.showPreviewError('No file attached to this document');
+        return;
+      }
+      
+      document.getElementById('preview-document-title').textContent = doc.document_name;
+      
+      // Handle different file types
+      const fileType = doc.file_type.toLowerCase();
+      
+      if (fileType === 'pdf') {
+        await this.loadPDF(docId);
+      } else if (['jpg', 'jpeg', 'png'].includes(fileType)) {
+        await this.loadImage(docId);
+      } else {
+        this.showPreviewError(`Preview not available for ${fileType.toUpperCase()} files. Click download to view the file.`);
+      }
+      
+    } catch (err) {
+      console.error('Preview error:', err);
+      this.showPreviewError('Failed to load document preview');
+    }
+  },
+
+  async loadPDF(docId) {
+    try {
+      const url = `/api/documents/${docId}/view`;
+      
+      const loadingTask = pdfjsLib.getDocument(url);
+      
+      loadingTask.promise.then((pdf) => {
+        this.pdfDoc = pdf;
+        document.getElementById('page_count').textContent = pdf.numPages;
+        document.getElementById('preview-loading').style.display = 'none';
+        document.getElementById('preview-controls').style.display = 'flex';
+        document.getElementById('pdf-canvas').style.display = 'block';
+        this.pageNum = 1;
+        this.renderPage(this.pageNum);
+      }).catch((error) => {
+        console.error('PDF loading error:', error);
+        this.showPreviewError('Failed to load PDF file');
+      });
+      
+    } catch (err) {
+      console.error('PDF error:', err);
+      this.showPreviewError('Failed to load PDF');
+    }
+  },
+
+  renderPage(num) {
+    this.pageRendering = true;
+    
+    this.pdfDoc.getPage(num).then((page) => {
+      const canvas = document.getElementById('pdf-canvas');
+      const ctx = canvas.getContext('2d');
+      const viewport = page.getViewport({ scale: this.scale });
+      
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      const renderContext = {
+        canvasContext: ctx,
+        viewport: viewport
+      };
+      
+      const renderTask = page.render(renderContext);
+      
+      renderTask.promise.then(() => {
+        this.pageRendering = false;
+        if (this.pageNumPending !== null) {
+          this.renderPage(this.pageNumPending);
+          this.pageNumPending = null;
+        }
+      });
+    });
+    
+    document.getElementById('page_num').textContent = num;
+  },
+
+  queueRenderPage(num) {
+    if (this.pageRendering) {
+      this.pageNumPending = num;
+    } else {
+      this.renderPage(num);
+    }
+  },
+
+  previousPage() {
+    if (this.pageNum <= 1) return;
+    this.pageNum--;
+    this.queueRenderPage(this.pageNum);
+  },
+
+  nextPage() {
+    if (this.pageNum >= this.pdfDoc.numPages) return;
+    this.pageNum++;
+    this.queueRenderPage(this.pageNum);
+  },
+
+  async loadImage(docId) {
+    try {
+      const url = `/api/documents/${docId}/view`;
+      
+      const img = document.getElementById('image-preview');
+      img.onload = () => {
+        document.getElementById('preview-loading').style.display = 'none';
+        img.style.display = 'block';
+      };
+      
+      img.onerror = () => {
+        this.showPreviewError('Failed to load image file');
+      };
+      
+      img.src = url;
+      
+    } catch (err) {
+      console.error('Image loading error:', err);
+      this.showPreviewError('Failed to load image');
+    }
+  },
+
+  showPreviewError(message) {
+    document.getElementById('preview-loading').style.display = 'none';
+    document.getElementById('preview-error').style.display = 'block';
+    document.getElementById('preview-error-message').textContent = message;
+  },
+
+  closePreview() {
+    document.getElementById('document-preview-modal').style.display = 'none';
+    this.pdfDoc = null;
+    this.currentDocumentId = null;
+    this.pageNum = 1;
+  },
+
+  downloadCurrentDocument() {
+    if (this.currentDocumentId) {
+      window.open(`/api/documents/${this.currentDocumentId}/download`, '_blank');
     }
   },
 

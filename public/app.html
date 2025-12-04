@@ -751,6 +751,15 @@
       color: #2e7d32 !important;
     }
   </style>
+  
+  <!-- PDF.js Library for document preview -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Configure PDF.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
 </head>
 <body>
   <div class="topbar" id="topbar">
@@ -1908,6 +1917,63 @@
       }
     });
   </script>
+
+  <!-- Document Preview Modal -->
+  <div id="document-preview-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; overflow:auto;">
+    <div style="position:relative; width:95%; max-width:1200px; margin:20px auto; background:white; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+      <!-- Header -->
+      <div style="padding:20px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
+        <h2 id="preview-document-title" style="margin:0; color:var(--primary);">Document Preview</h2>
+        <button onclick="app.closePreview()" style="background:none; border:none; font-size:28px; cursor:pointer; color:#999; transition:color 0.3s;" onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">&times;</button>
+      </div>
+      
+      <!-- Controls -->
+      <div id="preview-controls" style="padding:15px 20px; background:#f8f9fa; border-bottom:1px solid #ddd; display:none; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button onclick="app.previousPage()" class="btn btn-secondary" style="padding:8px 16px;">← Previous</button>
+          <span style="padding:8px 16px; background:white; border-radius:4px; font-weight:500;">
+            Page <span id="page_num">1</span> / <span id="page_count">1</span>
+          </span>
+          <button onclick="app.nextPage()" class="btn btn-secondary" style="padding:8px 16px;">Next →</button>
+        </div>
+        <button onclick="app.downloadCurrentDocument()" class="btn btn-primary" style="padding:8px 20px;">
+          📥 Download
+        </button>
+      </div>
+      
+      <!-- Preview Content -->
+      <div id="preview-content" style="padding:20px; min-height:400px; max-height:calc(100vh - 250px); overflow:auto; display:flex; justify-content:center; align-items:flex-start; background:#f5f7f9;">
+        <!-- PDF Canvas -->
+        <canvas id="pdf-canvas" style="max-width:100%; border:1px solid #ddd; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:none;"></canvas>
+        
+        <!-- Image Preview -->
+        <img id="image-preview" style="max-width:100%; max-height:800px; border:1px solid #ddd; background:white; box-shadow:0 2px 8px rgba(0,0,0,0.1); display:none;" alt="Document Preview">
+        
+        <!-- Loading Spinner -->
+        <div id="preview-loading" style="text-align:center; padding:60px; display:none;">
+          <div style="border:4px solid #f3f3f3; border-top:4px solid var(--primary); border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite; margin:0 auto 20px;"></div>
+          <p style="color:#666; font-size:16px;">Loading document...</p>
+        </div>
+        
+        <!-- Error Message -->
+        <div id="preview-error" style="text-align:center; padding:60px; display:none;">
+          <div style="font-size:48px; color:#dc3545; margin-bottom:20px;">⚠️</div>
+          <h3 style="color:#dc3545; margin-bottom:10px;">Preview Not Available</h3>
+          <p id="preview-error-message" style="color:#666;"></p>
+          <button onclick="app.downloadCurrentDocument()" class="btn btn-primary" style="margin-top:20px;">
+            Download Document
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 
   <!-- Footer -->
   <footer class="footer">

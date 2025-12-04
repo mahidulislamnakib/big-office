@@ -5,6 +5,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const multer = require('multer');
 const AlertGenerator = require('./alert-generator');
 
 const DB_FILE = path.join(__dirname, 'data', 'tenders.db');
@@ -40,6 +41,83 @@ app.get('/', (req, res) => {
 const row = (sql, params = []) => db.prepare(sql).get(params);
 const rows = (sql, params = []) => db.prepare(sql).all(params);
 const run = (sql, params = []) => db.prepare(sql).run(params);
+
+// ============================================
+// MULTER CONFIGURATION FOR FILE UPLOADS
+// ============================================
+
+// Configure storage for firm documents
+const documentStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const firmId = req.params.firmId || 'temp';
+    const dir = path.join(__dirname, 'uploads', 'firm_documents', `firm_${firmId}`);
+    
+    // Create directory if doesn't exist
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    // Generate unique filename: timestamp-randomstring-originalname
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    cb(null, uniqueSuffix + '-' + sanitizedName);
+  }
+});
+
+// File filter for validation
+const documentFileFilter = function (req, file, cb) {
+  // Accept only specific file types
+  const allowedTypes = /pdf|jpg|jpeg|png|doc|docx|xlsx|xls/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+  
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only PDF, images, and office documents allowed.'));
+  }
+};
+
+// Configure upload middleware
+const uploadDocument = multer({
+  storage: documentStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1 // Single file upload
+  },
+  fileFilter: documentFileFilter
+});
+
+// Storage for letterhead assets (logos, seals, signatures)
+const letterheadStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const firmId = req.params.firmId || 'temp';
+    const dir = path.join(__dirname, 'uploads', 'letterheads', `firm_${firmId}`);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    cb(null, uniqueSuffix + '-' + sanitizedName);
+  }
+});
+
+const uploadLetterhead = multer({
+  storage: letterheadStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for images
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG and PNG images are allowed for letterhead assets.'));
+    }
+  }
+});
 
 // Initialize alert generator
 const alertGenerator = new AlertGenerator();
@@ -2138,15 +2216,28 @@ app.get('/api/firms/:firmId/dashboard', (req, res) => {
   }
 });
 
-// Add new document
-app.post('/api/firms/:firmId/documents', (req, res) => {
+// Add new document with file upload
+app.post('/api/firms/:firmId/documents', uploadDocument.single('document_file'), (req, res) => {
   try {
     const { firmId } = req.params;
     const {
       document_type, document_name, document_number, description,
-      issue_date, expiry_date, issuing_authority, file_path,
-      file_type, file_size, has_expiry, reminder_days, notes
+      issue_date, expiry_date, issuing_authority,
+      has_expiry, reminder_days, notes
     } = req.body;
+    
+    // Get file info from multer
+    let file_path = null;
+    let file_type = null;
+    let file_size = null;
+    let original_filename = null;
+    
+    if (req.file) {
+      file_path = req.file.path;
+      file_type = path.extname(req.file.originalname).substring(1).toLowerCase();
+      file_size = req.file.size;
+      original_filename = req.file.originalname;
+    }
     
     const result = run(
       `INSERT INTO firm_documents (
@@ -2161,10 +2252,15 @@ app.post('/api/firms/:firmId/documents', (req, res) => {
       ]
     );
     
-    res.json({ id: result.lastInsertRowid, success: true });
+    res.json({ 
+      id: result.lastInsertRowid, 
+      success: true,
+      file_uploaded: !!req.file,
+      original_filename: original_filename
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'DB error' });
+    res.status(500).json({ error: 'DB error', message: err.message });
   }
 });
 
@@ -2203,11 +2299,100 @@ app.put('/api/firms/:firmId/documents/:id', (req, res) => {
 // Delete document
 app.delete('/api/firms/:firmId/documents/:id', (req, res) => {
   try {
+    const doc = row('SELECT file_path FROM firm_documents WHERE id = ?', [req.params.id]);
+    
+    // Delete physical file if exists
+    if (doc && doc.file_path && fs.existsSync(doc.file_path)) {
+      fs.unlinkSync(doc.file_path);
+    }
+    
     run('DELETE FROM firm_documents WHERE id = ?', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// View/Preview document file
+app.get('/api/documents/:id/view', (req, res) => {
+  try {
+    const docId = req.params.id;
+    const doc = row('SELECT * FROM firm_documents WHERE id = ?', [docId]);
+    
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    if (!doc.file_path) {
+      return res.status(404).json({ error: 'No file attached to this document' });
+    }
+    
+    const filePath = doc.file_path;
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found on disk' });
+    }
+    
+    // Set appropriate content type
+    const contentTypes = {
+      'pdf': 'application/pdf',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xls': 'application/vnd.ms-excel'
+    };
+    
+    const contentType = contentTypes[doc.file_type] || 'application/octet-stream';
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${doc.document_name}.${doc.file_type}"`);
+    
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Download document file
+app.get('/api/documents/:id/download', (req, res) => {
+  try {
+    const docId = req.params.id;
+    const doc = row('SELECT * FROM firm_documents WHERE id = ?', [docId]);
+    
+    if (!doc) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    if (!doc.file_path) {
+      return res.status(404).json({ error: 'No file attached to this document' });
+    }
+    
+    const filePath = doc.file_path;
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found on disk' });
+    }
+    
+    // Force download with proper filename
+    res.download(filePath, `${doc.document_name}.${doc.file_type}`, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Download failed' });
+        }
+      }
+    });
+    
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
