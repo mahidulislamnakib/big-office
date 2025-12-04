@@ -584,6 +584,10 @@
       <div class="menu-item" data-page="team">👤 Team Members</div>
       <div class="menu-item" data-page="tasks">✅ Tasks</div>
       
+      <div class="menu-section">Documents & Finance</div>
+      <div class="menu-item" data-page="letters">✉️ Letter Hub</div>
+      <div class="menu-item" data-page="expenses">💸 Expense Manager</div>
+      
       <div class="menu-section">System</div>
       <div class="menu-item" data-page="users">👨‍💼 Users & Admin</div>
       <div class="menu-item" data-page="alerts">🔔 Alerts</div>
@@ -1205,6 +1209,160 @@
                 </tr>
               </thead>
               <tbody id="tender-summaries-list"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Letter Hub -->
+      <div class="page" id="letters">
+        <div class="page-header">
+          <h1 class="page-title">✉️ Letter Hub</h1>
+          <div>
+            <button class="btn btn-secondary" onclick="app.openModal('letter-category')">+ Category</button>
+            <button class="btn btn-primary" onclick="app.openModal('letter-template')">+ Template</button>
+          </div>
+        </div>
+
+        <!-- Categories Section -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Letter Categories</h3>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Templates</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="letter-categories-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Templates Section -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <h3>Letter Templates</h3>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Used</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="letter-templates-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Generated Letters Section -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <h3>Generated Letters</h3>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Subject</th>
+                  <th>Template</th>
+                  <th>Firm</th>
+                  <th>Project</th>
+                  <th>Status</th>
+                  <th>Generated</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="generated-letters-list"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expense Manager -->
+      <div class="page" id="expenses">
+        <div class="page-header">
+          <h1 class="page-title">💸 Expense Manager</h1>
+          <div>
+            <button class="btn btn-secondary" onclick="app.openModal('expense-category')">+ Category</button>
+            <button class="btn btn-primary" onclick="app.openModal('expense')">+ Expense</button>
+          </div>
+        </div>
+
+        <!-- Statistics Dashboard -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Expense Summary</h3>
+          </div>
+          <div class="card-body">
+            <div id="expense-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;"></div>
+          </div>
+        </div>
+
+        <!-- Expense Categories -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <h3>Expense Categories</h3>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Budget Limit</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="expense-categories-list"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Expenses List -->
+        <div class="card" style="margin-top: 20px;">
+          <div class="card-header">
+            <h3>Expenses</h3>
+            <div style="display: flex; gap: 10px;">
+              <select id="expense-status-filter" onchange="app.loadExpenses()">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="paid">Paid</option>
+              </select>
+              <select id="expense-category-filter" onchange="app.loadExpenses()">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Firm</th>
+                  <th>Project</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Vendor</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="expenses-list"></tbody>
             </table>
           </div>
         </div>

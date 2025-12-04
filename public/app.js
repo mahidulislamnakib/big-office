@@ -82,7 +82,9 @@ const app = {
       suppliers: () => this.loadSuppliers(),
       clients: () => this.loadClients(),
       users: () => this.loadUsers(),
-      'tender-summaries': () => this.loadTenderSummaries()
+      'tender-summaries': () => this.loadTenderSummaries(),
+      letters: () => this.loadLetters(),
+      expenses: () => this.loadExpenses()
     };
     
     if (loaders[pageId]) loaders[pageId]();
@@ -1447,6 +1449,159 @@ const app = {
         const formHTML = await response.text();
         return formHTML;
       },
+      'letter-category': `
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Category Name *</label>
+            <input type="text" id="modal-name" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea id="modal-description" rows="2"></textarea>
+          </div>
+        </div>
+      `,
+      'letter-template': `
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Template Title *</label>
+            <input type="text" id="modal-title" required>
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select id="modal-category-id" required></select>
+          </div>
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea id="modal-description" rows="2"></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Template Content *</label>
+            <textarea id="modal-content" rows="10" required style="font-family: monospace;"></textarea>
+            <small style="color: #666;">Use placeholders: {{company_name}}, {{date}}, {{recipient_name}}, etc.</small>
+          </div>
+          <div class="form-group full-width">
+            <label>Sample Placeholders</label>
+            <textarea id="modal-sample-data" rows="3" placeholder='{"company_name": "ABC Corp", "date": "2024-01-15"}'></textarea>
+            <small style="color: #666;">JSON format for default placeholder values</small>
+          </div>
+        </div>
+      `,
+      'generated-letter': `
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Subject *</label>
+            <input type="text" id="modal-subject" required>
+          </div>
+          <div class="form-group">
+            <label>Template *</label>
+            <select id="modal-template-id" required></select>
+          </div>
+          <div class="form-group">
+            <label>Firm</label>
+            ${firmSelect}
+          </div>
+          <div class="form-group">
+            <label>Project</label>
+            <select id="modal-project-id">
+              <option value="">Select Project</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="modal-status">
+              <option value="draft">Draft</option>
+              <option value="final">Final</option>
+              <option value="sent">Sent</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Generated Content *</label>
+            <textarea id="modal-content" rows="10" required></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Notes</label>
+            <textarea id="modal-notes" rows="2"></textarea>
+          </div>
+        </div>
+      `,
+      'expense-category': `
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Category Name *</label>
+            <input type="text" id="modal-name" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea id="modal-description" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Budget Limit (Optional)</label>
+            <input type="number" step="0.01" id="modal-budget-limit" placeholder="0.00">
+          </div>
+        </div>
+      `,
+      'expense': `
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" id="modal-expense-date" required>
+          </div>
+          <div class="form-group">
+            <label>Category *</label>
+            <select id="modal-category-id" required></select>
+          </div>
+          <div class="form-group full-width">
+            <label>Description *</label>
+            <input type="text" id="modal-description" required>
+          </div>
+          <div class="form-group">
+            <label>Amount *</label>
+            <input type="number" step="0.01" id="modal-amount" required>
+          </div>
+          <div class="form-group">
+            <label>Firm</label>
+            ${firmSelect}
+          </div>
+          <div class="form-group">
+            <label>Project</label>
+            <select id="modal-project-id">
+              <option value="">Select Project</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Vendor/Supplier</label>
+            <input type="text" id="modal-vendor">
+          </div>
+          <div class="form-group">
+            <label>Payment Method</label>
+            <select id="modal-payment-method">
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="cheque">Cheque</option>
+              <option value="card">Card</option>
+              <option value="online">Online Payment</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="modal-status">
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Receipt/Invoice #</label>
+            <input type="text" id="modal-receipt-number">
+          </div>
+          <div class="form-group full-width">
+            <label>Notes</label>
+            <textarea id="modal-notes" rows="2"></textarea>
+          </div>
+        </div>
+      `,
     };
 
     const formContent = forms[type];
@@ -1547,7 +1702,12 @@ const app = {
       supplier: '/api/suppliers',
       client: '/api/clients',
       user: '/api/users',
-      'tender-summary': '/api/tender-summaries'
+      'tender-summary': '/api/tender-summaries',
+      'letter-category': '/api/letter-categories',
+      'letter-template': '/api/letter-templates',
+      'generated-letter': '/api/generated-letters',
+      'expense-category': '/api/expense-categories',
+      'expense': '/api/expenses'
     };
 
     try {
@@ -1848,7 +2008,45 @@ const app = {
           items: items,
           requirements: requirements
         };
-      }
+      },
+      'letter-category': () => ({
+        name: getValue('name'),
+        description: getValue('description')
+      }),
+      'letter-template': () => ({
+        title: getValue('title'),
+        category_id: getValue('category-id'),
+        description: getValue('description'),
+        content: getValue('content'),
+        sample_data: getValue('sample-data')
+      }),
+      'generated-letter': () => ({
+        subject: getValue('subject'),
+        template_id: getValue('template-id'),
+        firm_id: getValue('firm-id') || null,
+        project_id: getValue('project-id') || null,
+        content: getValue('content'),
+        status: getValue('status') || 'draft',
+        notes: getValue('notes')
+      }),
+      'expense-category': () => ({
+        name: getValue('name'),
+        description: getValue('description'),
+        budget_limit: getValue('budget-limit') || null
+      }),
+      'expense': () => ({
+        expense_date: getValue('expense-date'),
+        description: getValue('description'),
+        amount: getValue('amount'),
+        category_id: getValue('category-id'),
+        firm_id: getValue('firm-id') || null,
+        project_id: getValue('project-id') || null,
+        vendor: getValue('vendor'),
+        payment_method: getValue('payment-method'),
+        status: getValue('status') || 'pending',
+        receipt_number: getValue('receipt-number'),
+        notes: getValue('notes')
+      })
     };
 
     return dataMap[type] ? dataMap[type]() : {};
@@ -1872,7 +2070,12 @@ const app = {
       loan: `/api/loans/${id}`,
       tender: `/api/tenders/${id}`,
       project: `/api/projects/${id}`,
-      contact: `/api/contacts/${id}`
+      contact: `/api/contacts/${id}`,
+      'letter-category': `/api/letter-categories/${id}`,
+      'letter-template': `/api/letter-templates/${id}`,
+      'generated-letter': `/api/generated-letters/${id}`,
+      'expense-category': `/api/expense-categories/${id}`,
+      'expense': `/api/expenses/${id}`
     };
 
     try {
@@ -2274,6 +2477,206 @@ const app = {
       }));
       this.downloadCSV(data, 'tenders_export.csv');
     });
+  },
+
+  // Letter Hub Management
+  async loadLetters() {
+    await Promise.all([
+      this.loadLetterCategories(),
+      this.loadLetterTemplates(),
+      this.loadGeneratedLetters()
+    ]);
+  },
+
+  async loadLetterCategories() {
+    const res = await fetch(`${API}/letter-categories`);
+    const categories = await res.json();
+    
+    const html = categories.map(c => `
+      <tr>
+        <td>${c.name}</td>
+        <td>${c.description || '-'}</td>
+        <td>${c.template_count || 0}</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick="app.editItem('letter-category', ${c.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="app.deleteItem('letter-category', ${c.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    document.getElementById('letter-categories-list').innerHTML = html || '<tr><td colspan="4">No categories found</td></tr>';
+  },
+
+  async loadLetterTemplates() {
+    const res = await fetch(`${API}/letter-templates`);
+    const templates = await res.json();
+    
+    const html = templates.map(t => `
+      <tr>
+        <td>${t.title}</td>
+        <td>${t.category_name || '-'}</td>
+        <td>${t.description || '-'}</td>
+        <td>${t.usage_count || 0}</td>
+        <td>${new Date(t.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="btn btn-sm btn-info" onclick="app.viewTemplate(${t.id})">View</button>
+          <button class="btn btn-sm btn-secondary" onclick="app.editItem('letter-template', ${t.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="app.deleteItem('letter-template', ${t.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    document.getElementById('letter-templates-list').innerHTML = html || '<tr><td colspan="6">No templates found</td></tr>';
+    
+    // Populate category dropdown in template form
+    const categorySelect = document.getElementById('modal-category-id');
+    if (categorySelect) {
+      const catRes = await fetch(`${API}/letter-categories`);
+      const cats = await catRes.json();
+      categorySelect.innerHTML = '<option value="">Select Category</option>' + 
+        cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+  },
+
+  async loadGeneratedLetters() {
+    const firmFilter = this.getUserFirmFilter();
+    const url = firmFilter ? `${API}/generated-letters?firm_id=${firmFilter}` : `${API}/generated-letters`;
+    const res = await fetch(url);
+    const letters = await res.json();
+    
+    const html = letters.map(l => `
+      <tr>
+        <td>${l.subject}</td>
+        <td>${l.template_title || '-'}</td>
+        <td>${l.firm_name || '-'}</td>
+        <td>${l.project_name || '-'}</td>
+        <td><span class="badge badge-${l.status === 'sent' ? 'success' : l.status === 'final' ? 'info' : 'secondary'}">${l.status}</span></td>
+        <td>${new Date(l.generated_at).toLocaleDateString()}</td>
+        <td>
+          <button class="btn btn-sm btn-info" onclick="app.viewLetter(${l.id})">View</button>
+          <button class="btn btn-sm btn-secondary" onclick="app.editItem('generated-letter', ${l.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="app.deleteItem('generated-letter', ${l.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    document.getElementById('generated-letters-list').innerHTML = html || '<tr><td colspan="7">No letters generated</td></tr>';
+  },
+
+  async viewTemplate(id) {
+    const res = await fetch(`${API}/letter-templates/${id}`);
+    const template = await res.json();
+    alert(`Title: ${template.title}\n\nContent:\n${template.content}`);
+  },
+
+  async viewLetter(id) {
+    const res = await fetch(`${API}/generated-letters/${id}`);
+    const letter = await res.json();
+    alert(`Subject: ${letter.subject}\n\nContent:\n${letter.content}`);
+  },
+
+  // Expense Manager
+  async loadExpenses() {
+    await Promise.all([
+      this.loadExpenseStats(),
+      this.loadExpenseCategories(),
+      this.loadExpensesList()
+    ]);
+  },
+
+  async loadExpenseStats() {
+    const res = await fetch(`${API}/expenses/statistics/summary`);
+    const stats = await res.json();
+    
+    const html = `
+      <div style="padding: 15px; background: #e3f2fd; border-radius: 8px; text-align: center;">
+        <h4 style="margin: 0;">Total Expenses</h4>
+        <h2 style="margin: 5px 0; color: #1976d2;">৳${this.formatNumber(stats.total_amount || 0)}</h2>
+        <p style="margin: 0; color: #666;">${stats.total_count || 0} transactions</p>
+      </div>
+      <div style="padding: 15px; background: #fff3e0; border-radius: 8px; text-align: center;">
+        <h4 style="margin: 0;">Pending</h4>
+        <h2 style="margin: 5px 0; color: #f57c00;">৳${this.formatNumber(stats.pending_amount || 0)}</h2>
+        <p style="margin: 0; color: #666;">${stats.pending_count || 0} items</p>
+      </div>
+      <div style="padding: 15px; background: #e8f5e9; border-radius: 8px; text-align: center;">
+        <h4 style="margin: 0;">Approved</h4>
+        <h2 style="margin: 5px 0; color: #388e3c;">৳${this.formatNumber(stats.approved_amount || 0)}</h2>
+        <p style="margin: 0; color: #666;">${stats.approved_count || 0} items</p>
+      </div>
+      <div style="padding: 15px; background: #f3e5f5; border-radius: 8px; text-align: center;">
+        <h4 style="margin: 0;">Paid</h4>
+        <h2 style="margin: 5px 0; color: #7b1fa2;">৳${this.formatNumber(stats.paid_amount || 0)}</h2>
+        <p style="margin: 0; color: #666;">${stats.paid_count || 0} items</p>
+      </div>
+    `;
+    
+    document.getElementById('expense-stats').innerHTML = html;
+  },
+
+  async loadExpenseCategories() {
+    const res = await fetch(`${API}/expense-categories`);
+    const categories = await res.json();
+    
+    const html = categories.map(c => `
+      <tr>
+        <td>${c.name}</td>
+        <td>${c.description || '-'}</td>
+        <td>${c.budget_limit ? '৳' + this.formatNumber(c.budget_limit) : 'No limit'}</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick="app.editItem('expense-category', ${c.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="app.deleteItem('expense-category', ${c.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    document.getElementById('expense-categories-list').innerHTML = html || '<tr><td colspan="4">No categories found</td></tr>';
+    
+    // Populate category filters and form dropdown
+    const filterSelect = document.getElementById('expense-category-filter');
+    if (filterSelect) {
+      filterSelect.innerHTML = '<option value="">All Categories</option>' + 
+        categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+    
+    const categorySelect = document.getElementById('modal-category-id');
+    if (categorySelect) {
+      categorySelect.innerHTML = '<option value="">Select Category</option>' + 
+        categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+  },
+
+  async loadExpensesList() {
+    const firmFilter = this.getUserFirmFilter();
+    const statusFilter = document.getElementById('expense-status-filter')?.value || '';
+    const categoryFilter = document.getElementById('expense-category-filter')?.value || '';
+    
+    let url = `${API}/expenses?`;
+    if (firmFilter) url += `firm_id=${firmFilter}&`;
+    if (statusFilter) url += `status=${statusFilter}&`;
+    if (categoryFilter) url += `category_id=${categoryFilter}&`;
+    
+    const res = await fetch(url);
+    const expenses = await res.json();
+    
+    const html = expenses.map(e => `
+      <tr>
+        <td>${new Date(e.expense_date).toLocaleDateString()}</td>
+        <td>${e.description}</td>
+        <td>${e.category_name || '-'}</td>
+        <td>${e.firm_name || '-'}</td>
+        <td>${e.project_name || '-'}</td>
+        <td>৳${this.formatNumber(e.amount)}</td>
+        <td><span class="badge badge-${this.getStatusColor(e.status)}">${e.status}</span></td>
+        <td>${e.vendor || '-'}</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick="app.editItem('expense', ${e.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="app.deleteItem('expense', ${e.id})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    document.getElementById('expenses-list').innerHTML = html || '<tr><td colspan="9">No expenses found</td></tr>';
   },
 
   downloadCSV(data, filename) {
