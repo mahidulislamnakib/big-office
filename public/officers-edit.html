@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Officer - Big Office</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7f9;
+      color: #333;
+    }
+    
+    .topbar {
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
+      color: white;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-back {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    
+    .btn-back:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    .page-header {
+      margin-bottom: 32px;
+    }
+    
+    .page-header h1 {
+      font-size: 32px;
+      color: #2c7a3a;
+      margin-bottom: 8px;
+    }
+    
+    .page-header p {
+      color: #666;
+      font-size: 16px;
+    }
+    
+    .form-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    
+    .form-section {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .form-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .form-section h3 {
+      font-size: 18px;
+      color: #2c7a3a;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .form-row.full {
+      grid-template-columns: 1fr;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-group label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .form-group label .required {
+      color: #e74c3c;
+      margin-left: 2px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #2c7a3a;
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .form-group .help-text {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .form-group .error {
+      font-size: 12px;
+      color: #e74c3c;
+      display: none;
+    }
+    
+    .form-group.has-error input,
+    .form-group.has-error select,
+    .form-group.has-error textarea {
+      border-color: #e74c3c;
+    }
+    
+    .form-group.has-error .error {
+      display: block;
+    }
+    
+    .photo-upload {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .photo-preview {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: #999;
+      overflow: hidden;
+    }
+    
+    .photo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .photo-upload-controls {
+      flex: 1;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+    
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+    
+    .btn-file {
+      padding: 10px 20px;
+      background: #2c7a3a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-block;
+    }
+    
+    .btn-file:hover {
+      background: #1e5528;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .btn-primary {
+      background: #2c7a3a;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1e5528;
+    }
+    
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .alert.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .alert.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .alert.show {
+      display: block;
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    
+    .loading-overlay.show {
+      display: flex;
+    }
+    
+    .loading-spinner {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2c7a3a;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 16px;
+      }
+      
+      .form-card {
+        padding: 20px;
+      }
+      
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .photo-upload {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .form-actions {
+        flex-direction: column-reverse;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+    
+    /* ===============================================
+       ADDITIONAL RESPONSIVE ENHANCEMENTS
+       =============================================== */
+    
+    /* Tablet (768px and below) */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 16px;
+        height: 56px;
+      }
+      
+      .logo {
+        font-size: 18px;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+      
+      .page-header h1 {
+        font-size: 24px;
+      }
+      
+      .page-header p {
+        font-size: 14px;
+      }
+      
+      .form-card {
+        padding: 20px;
+      }
+      
+      .section-title {
+        font-size: 16px;
+      }
+      
+      .photo-upload-area {
+        padding: 32px;
+      }
+    }
+    
+    /* Mobile (480px and below) */
+    @media (max-width: 480px) {
+      .topbar {
+        padding: 0 12px;
+        height: 52px;
+      }
+      
+      .logo {
+        font-size: 16px;
+        gap: 6px;
+      }
+      
+      .btn-back {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      
+      .container {
+        padding: 12px;
+      }
+      
+      .page-header h1 {
+        font-size: 20px;
+      }
+      
+      .page-header p {
+        font-size: 13px;
+      }
+      
+      .form-card {
+        padding: 16px;
+      }
+      
+      .section-title {
+        font-size: 15px;
+        padding-bottom: 10px;
+        margin-bottom: 16px;
+      }
+      
+      .form-row {
+        gap: 12px;
+      }
+      
+      .form-group label {
+        font-size: 13px;
+      }
+      
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        font-size: 14px;
+        padding: 10px;
+      }
+      
+      .photo-upload-area {
+        padding: 24px;
+        font-size: 14px;
+      }
+      
+      .photo-preview {
+        width: 100px;
+        height: 100px;
+      }
+      
+      .form-actions {
+        padding-top: 16px;
+        gap: 10px;
+      }
+      
+      .btn {
+        padding: 10px 20px;
+        font-size: 14px;
+      }
+    }
+    
+    /* ===============================================
+       LOADING & ACCESSIBILITY
+       =============================================== */
+    
+    .loading-spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #2c7a3a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .btn.loading .loading-spinner {
+      display: inline-block;
+    }
+    
+    /* Focus states for accessibility */
+    .btn:focus,
+    .btn-back:focus,
+    button:focus,
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid #2c7a3a;
+      outline-offset: 2px;
+    }
+    
+    /* Skip to main content link for screen readers */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #2c7a3a;
+      color: white;
+      padding: 8px;
+      text-decoration: none;
+      z-index: 100;
+    }
+    
+    .skip-link:focus {
+      top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">
+      ✏️ Edit Officer
+    </div>
+    <a href="#" class="btn-back" onclick="goBack(); return false;">← Back</a>
+  </div>
+  
+  <div class="container">
+    <div class="page-header">
+      <h1>Edit Officer</h1>
+      <p>Update officer information</p>
+    </div>
+    
+    <div id="alertContainer"></div>
+    
+    <form id="officerForm" class="form-card">
+      <!-- Personal Information -->
+      <div class="form-section">
+        <h3>👤 Personal Information</h3>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name (English)<span class="required">*</span></label>
+            <input type="text" name="full_name" required>
+            <span class="error">Full name is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Full Name (Bangla)</label>
+            <input type="text" name="name_bangla">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Father's Name</label>
+            <input type="text" name="father_name">
+          </div>
+          
+          <div class="form-group">
+            <label>Mother's Name</label>
+            <input type="text" name="mother_name">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date of Birth<span class="required">*</span></label>
+            <input type="date" name="date_of_birth" required>
+            <span class="error">Date of birth is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Gender<span class="required">*</span></label>
+            <select name="gender" required>
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+            <span class="error">Gender is required</span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Blood Group</label>
+            <select name="blood_group">
+              <option value="">Select Blood Group</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Religion</label>
+            <select name="religion">
+              <option value="">Select Religion</option>
+              <option value="islam">Islam</option>
+              <option value="hinduism">Hinduism</option>
+              <option value="buddhism">Buddhism</option>
+              <option value="christianity">Christianity</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Marital Status</label>
+            <select name="marital_status">
+              <option value="">Select Status</option>
+              <option value="single">Single</option>
+              <option value="married">Married</option>
+              <option value="divorced">Divorced</option>
+              <option value="widowed">Widowed</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>NID Number<span class="required">*</span></label>
+            <input type="text" name="nid_number" pattern="[0-9]{10,17}" required>
+            <span class="help-text">10, 13, or 17 digits</span>
+            <span class="error">Valid NID number is required</span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Passport Number</label>
+            <input type="text" name="passport_number">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Contact Information -->
+      <div class="form-section">
+        <h3>📞 Contact Information</h3>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Personal Mobile<span class="required">*</span></label>
+            <input type="tel" name="personal_mobile" pattern="01[0-9]{9}" required>
+            <span class="help-text">Format: 01XXXXXXXXX</span>
+            <span class="error">Valid mobile number is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Official Mobile</label>
+            <input type="tel" name="official_mobile" pattern="01[0-9]{9}">
+            <span class="help-text">Format: 01XXXXXXXXX</span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Personal Email<span class="required">*</span></label>
+            <input type="email" name="personal_email" required>
+            <span class="error">Valid email is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Official Email</label>
+            <input type="email" name="official_email">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Emergency Contact Name</label>
+            <input type="text" name="emergency_contact_name">
+          </div>
+          
+          <div class="form-group">
+            <label>Emergency Contact Phone</label>
+            <input type="tel" name="emergency_contact_phone" pattern="01[0-9]{9}">
+            <span class="help-text">Format: 01XXXXXXXXX</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Address -->
+      <div class="form-section">
+        <h3>🏠 Address</h3>
+        
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Present Address<span class="required">*</span></label>
+            <textarea name="present_address" required></textarea>
+            <span class="error">Present address is required</span>
+          </div>
+        </div>
+        
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Permanent Address</label>
+            <textarea name="permanent_address"></textarea>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>District</label>
+            <input type="text" name="district">
+          </div>
+          
+          <div class="form-group">
+            <label>Division</label>
+            <select name="division">
+              <option value="">Select Division</option>
+              <option value="dhaka">Dhaka</option>
+              <option value="chittagong">Chittagong</option>
+              <option value="rajshahi">Rajshahi</option>
+              <option value="khulna">Khulna</option>
+              <option value="barisal">Barisal</option>
+              <option value="sylhet">Sylhet</option>
+              <option value="rangpur">Rangpur</option>
+              <option value="mymensingh">Mymensingh</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Post Code</label>
+            <input type="text" name="post_code" pattern="[0-9]{4}">
+            <span class="help-text">4 digits</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Employment Details -->
+      <div class="form-section">
+        <h3>💼 Employment Details</h3>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Employee ID<span class="required">*</span></label>
+            <input type="text" name="employee_id" required>
+            <span class="help-text">Auto-generated if left empty</span>
+            <span class="error">Employee ID is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Joining Date<span class="required">*</span></label>
+            <input type="date" name="joining_date" required>
+            <span class="error">Joining date is required</span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Designation<span class="required">*</span></label>
+            <select name="designation_id" id="designationSelect" required>
+              <option value="">Loading...</option>
+            </select>
+            <span class="error">Designation is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Position</label>
+            <select name="position_id" id="positionSelect">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Office<span class="required">*</span></label>
+            <select name="office_id" id="officeSelect" required>
+              <option value="">Loading...</option>
+            </select>
+            <span class="error">Office is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Department</label>
+            <input type="text" name="department">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Current Grade</label>
+            <input type="number" name="current_grade" min="1" max="20">
+          </div>
+          
+          <div class="form-group">
+            <label>Current Salary (BDT)</label>
+            <input type="number" name="current_salary" min="0" step="0.01">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Employment Status<span class="required">*</span></label>
+            <select name="employment_status" required>
+              <option value="">Select Status</option>
+              <option value="active" selected>Active</option>
+              <option value="on_leave">On Leave</option>
+              <option value="suspended">Suspended</option>
+              <option value="retired">Retired</option>
+              <option value="resigned">Resigned</option>
+            </select>
+            <span class="error">Employment status is required</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Education -->
+      <div class="form-section">
+        <h3>🎓 Education</h3>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Highest Degree<span class="required">*</span></label>
+            <input type="text" name="highest_degree" required>
+            <span class="error">Highest degree is required</span>
+          </div>
+          
+          <div class="form-group">
+            <label>Institution</label>
+            <input type="text" name="institution">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Passing Year</label>
+            <input type="number" name="passing_year" min="1950" max="2030">
+          </div>
+          
+          <div class="form-group">
+            <label>CGPA/Grade</label>
+            <input type="text" name="cgpa">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Photo Upload -->
+      <div class="form-section">
+        <h3>📸 Profile Photo</h3>
+        
+        <div class="photo-upload">
+          <div class="photo-preview" id="photoPreview">
+            👤
+          </div>
+          <div class="photo-upload-controls">
+            <div class="file-input-wrapper">
+              <label for="photoInput" class="btn-file">Choose Photo</label>
+              <input type="file" id="photoInput" name="photo" accept="image/jpeg,image/png,image/jpg">
+            </div>
+            <p class="help-text" style="margin-top: 8px;">JPG, PNG. Max 2MB</p>
+            <p id="photoFileName" style="font-size: 12px; color: #666; margin-top: 4px;"></p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Privacy & Visibility Settings -->
+      <div class="form-section">
+        <h3>🔒 Privacy & Visibility Settings</h3>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="profile_published" id="profile_published" value="1" style="width: auto; margin-right: 8px;">
+            Publish profile to public directory
+          </label>
+          <p class="help-text">If checked, this officer's profile will be visible in the public officers directory</p>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone Number Visibility</label>
+            <select name="phone_visibility" id="phone_visibility">
+              <option value="public">Public - Visible to everyone</option>
+              <option value="internal">Internal - Logged-in users only</option>
+              <option value="restricted">Restricted - Admins & managers only</option>
+              <option value="private">Private - Hidden from everyone</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Email Visibility</label>
+            <select name="email_visibility" id="email_visibility">
+              <option value="public">Public - Visible to everyone</option>
+              <option value="internal">Internal - Logged-in users only</option>
+              <option value="restricted">Restricted - Admins & managers only</option>
+              <option value="private">Private - Hidden from everyone</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>NID Number Visibility</label>
+            <select name="nid_visibility" id="nid_visibility">
+              <option value="public">Public - Visible to everyone</option>
+              <option value="internal">Internal - Logged-in users only</option>
+              <option value="restricted">Restricted - Admins & managers only</option>
+              <option value="private">Private - Hidden from everyone</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Verification Status</label>
+            <select name="verification_status" id="verification_status">
+              <option value="pending">Pending Verification</option>
+              <option value="verified">Verified</option>
+              <option value="needs_update">Needs Update</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Data Sharing Consent (JSON)</label>
+          <textarea name="consent_record" id="consent_record" rows="3" placeholder='{"date": "2024-01-15", "purpose": "directory_listing", "agreed": true}'></textarea>
+          <p class="help-text">Optional: JSON record of data sharing agreements and consents</p>
+        </div>
+      </div>
+      
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <a href="/officers" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          Update Officer
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Updating officer...</p>
+    </div>
+  </div>
+  
+  <script>
+    // Authentication check
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = '/login';
+    }
+    
+    // Check user role (HR/Admin only)
+    const userRole = localStorage.getItem('userRole');
+    if (!['admin', 'hr'].includes(userRole)) {
+      alert('Access denied. Only HR and Admin can edit officers.');
+      window.location.href = '/officers';
+    }
+    
+    // Get officer ID from URL
+    const urlParts = window.location.pathname.split('/');
+    const officerId = urlParts[urlParts.length - 2]; // /officers/:id/edit
+    
+    let existingOfficer = null;
+    
+    // Back navigation
+    function goBack() {
+      window.location.href = `/officers/${officerId}`;
+    }
+    
+    // Fetch with authentication
+    async function fetchWithAuth(url, options = {}) {
+      const token = localStorage.getItem('accessToken');
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+      };
+      
+      return fetch(url, { ...options, headers });
+    }
+    
+    // Load officer data
+    async function loadOfficerData() {
+      try {
+        document.getElementById('loadingOverlay').classList.add('show');
+        
+        const response = await fetchWithAuth(`/api/officers/${officerId}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error('Officer not found');
+        }
+        
+        existingOfficer = data.officer;
+        
+        // Populate form fields
+        const form = document.getElementById('officerForm');
+        Object.keys(existingOfficer).forEach(key => {
+          const input = form.querySelector(`[name="${key}"]`);
+          if (input && existingOfficer[key] !== null) {
+            if (input.type === 'checkbox') {
+              input.checked = existingOfficer[key] == 1 || existingOfficer[key] === true;
+            } else {
+              input.value = existingOfficer[key];
+            }
+          }
+        });
+        
+        // Show photo if exists
+        if (existingOfficer.photo_url) {
+          document.getElementById('photoPreview').innerHTML = 
+            `<img src="${existingOfficer.photo_url}" alt="Photo">`;
+          document.getElementById('photoFileName').textContent = 'Current photo';
+        }
+        
+        document.getElementById('loadingOverlay').classList.remove('show');
+      } catch (err) {
+        console.error('Load officer error:', err);
+        alert('Failed to load officer data');
+        window.location.href = '/officers';
+      }
+    }
+    
+    // Load designations
+    async function loadDesignations() {
+      try {
+        const response = await fetchWithAuth('/api/designations');
+        const designations = await response.json();
+        
+        const select = document.getElementById('designationSelect');
+        select.innerHTML = '<option value="">Select Designation</option>';
+        designations.forEach(d => {
+          const option = document.createElement('option');
+          option.value = d.id;
+          option.textContent = `${d.title}${d.grade_level ? ` (Grade ${d.grade_level})` : ''}`;
+          if (existingOfficer && d.id === existingOfficer.designation_id) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load designations:', err);
+      }
+    }
+    
+    // Load positions
+    async function loadPositions() {
+      try {
+        const response = await fetchWithAuth('/api/positions');
+        const positions = await response.json();
+        
+        const select = document.getElementById('positionSelect');
+        select.innerHTML = '<option value="">Select Position (Optional)</option>';
+        positions.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.id;
+          option.textContent = p.title;
+          if (existingOfficer && p.id === existingOfficer.position_id) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load positions:', err);
+        document.getElementById('positionSelect').innerHTML = '<option value="">Select Position (Optional)</option>';
+      }
+    }
+    
+    // Load offices
+    async function loadOffices() {
+      try {
+        const response = await fetchWithAuth('/api/offices');
+        const offices = await response.json();
+        
+        const select = document.getElementById('officeSelect');
+        select.innerHTML = '<option value="">Select Office</option>';
+        offices.forEach(o => {
+          const option = document.createElement('option');
+          option.value = o.id;
+          option.textContent = `${o.office_name}${o.office_code ? ` (${o.office_code})` : ''}`;
+          if (existingOfficer && o.id === existingOfficer.office_id) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load offices:', err);
+      }
+    }
+    
+    // Photo preview
+    document.getElementById('photoInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          alert('File too large. Max 2MB allowed.');
+          e.target.value = '';
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('photoPreview').innerHTML = 
+            `<img src="${e.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+        document.getElementById('photoFileName').textContent = file.name;
+      }
+    });
+    
+    // Show alert
+    function showAlert(message, type) {
+      const container = document.getElementById('alertContainer');
+      container.innerHTML = `
+        <div class="alert ${type} show">
+          ${message}
+        </div>
+      `;
+      
+      setTimeout(() => {
+        container.innerHTML = '';
+      }, 5000);
+    }
+    
+    // Form validation
+    function validateForm(formData) {
+      let isValid = true;
+      
+      // Clear previous errors
+      document.querySelectorAll('.form-group').forEach(g => {
+        g.classList.remove('has-error');
+      });
+      
+      // Required fields
+      const requiredFields = ['full_name', 'date_of_birth', 'gender', 'nid_number', 
+        'personal_mobile', 'personal_email', 'present_address', 'employee_id',
+        'joining_date', 'designation_id', 'office_id', 'employment_status', 'highest_degree'];
+      
+      requiredFields.forEach(field => {
+        const value = formData.get(field);
+        if (!value || value.trim() === '') {
+          const input = document.querySelector(`[name="${field}"]`);
+          if (input) {
+            input.closest('.form-group').classList.add('has-error');
+            isValid = false;
+          }
+        }
+      });
+      
+      // Email validation
+      const email = formData.get('personal_email');
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        document.querySelector('[name="personal_email"]').closest('.form-group').classList.add('has-error');
+        isValid = false;
+      }
+      
+      // Mobile validation
+      const mobile = formData.get('personal_mobile');
+      if (mobile && !/^01[0-9]{9}$/.test(mobile)) {
+        document.querySelector('[name="personal_mobile"]').closest('.form-group').classList.add('has-error');
+        isValid = false;
+      }
+      
+      // NID validation
+      const nid = formData.get('nid_number');
+      if (nid && !/^[0-9]{10,17}$/.test(nid)) {
+        document.querySelector('[name="nid_number"]').closest('.form-group').classList.add('has-error');
+        isValid = false;
+      }
+      
+      return isValid;
+    }
+    
+    // Form submission
+    document.getElementById('officerForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      
+      // Validate form
+      if (!validateForm(formData)) {
+        showAlert('Please fill in all required fields correctly.', 'error');
+        return;
+      }
+      
+      // Show loading
+      document.getElementById('loadingOverlay').classList.add('show');
+      document.getElementById('submitBtn').disabled = true;
+      
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}`, {
+          method: 'PUT',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          showAlert('Officer updated successfully!', 'success');
+          setTimeout(() => {
+            window.location.href = `/officers/${officerId}`;
+          }, 1500);
+        } else {
+          throw new Error(data.error || 'Failed to update officer');
+        }
+      } catch (err) {
+        console.error('Update officer error:', err);
+        showAlert(err.message, 'error');
+        document.getElementById('loadingOverlay').classList.remove('show');
+        document.getElementById('submitBtn').disabled = false;
+      }
+    });
+    
+    // Initialize - load data first, then dropdowns
+    loadOfficerData().then(() => {
+      loadDesignations();
+      loadPositions();
+      loadOffices();
+    });
+  </script>
+</body>
+</html>

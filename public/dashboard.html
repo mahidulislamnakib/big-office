@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#2c7a3a">
   <title>Bangladesh Tender Management System</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -148,7 +151,6 @@
       font-size: 13px;
       color: #666;
       margin-bottom: 8px;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
@@ -203,7 +205,6 @@
       font-size: 13px;
       font-weight: 600;
       color: #666;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
       border-bottom: 2px solid #dee2e6;
     }
@@ -418,6 +419,132 @@
       text-align: center;
       padding: 40px;
       color: #999;
+    }
+    
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 12px;
+        height: 56px;
+      }
+      
+      .logo {
+        font-size: 16px;
+      }
+      
+      .user-info {
+        font-size: 12px;
+      }
+      
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 0;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+      }
+      
+      .menu {
+        display: flex;
+        overflow-x: auto;
+        gap: 0;
+        padding: 0;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .menu-item {
+        flex: 1;
+        padding: 12px 8px;
+        font-size: 11px;
+        text-align: center;
+        min-width: 70px;
+        border-radius: 0;
+      }
+      
+      .main-content {
+        margin-left: 0;
+        margin-bottom: 60px;
+        padding: 16px 12px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .data-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      table {
+        min-width: 100%;
+        font-size: 14px;
+      }
+      
+      th, td {
+        padding: 10px 8px;
+      }
+      
+      .btn {
+        padding: 10px 16px;
+        font-size: 14px;
+        min-height: 44px;
+      }
+      
+      .btn-sm {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .topbar {
+        padding: 0 8px;
+        height: 52px;
+      }
+      
+      .logo {
+        font-size: 14px;
+      }
+      
+      .logo span {
+        display: none;
+      }
+      
+      .user-name {
+        display: none;
+      }
+      
+      .menu-item {
+        padding: 10px 4px;
+        font-size: 10px;
+        min-width: 60px;
+      }
+      
+      .main-content {
+        padding: 12px 8px;
+      }
+      
+      .stat-card {
+        padding: 14px;
+      }
+      
+      .stat-number {
+        font-size: 22px;
+      }
+      
+      table {
+        font-size: 12px;
+      }
+      
+      th, td {
+        padding: 8px 6px;
+      }
     }
   </style>
 </head>

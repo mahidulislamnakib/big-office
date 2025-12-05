@@ -1,8 +1,10 @@
-# Big Office - Tender Management System
+# Big Office - Office, Projects & Procurement Management Platform
 
-**Version**: 2.0.0 | **Status**: Production Ready ✅
+**Version**: 3.1.0 | **Status**: Production Ready ✅
 
-A comprehensive office management system for construction and contracting firms in Bangladesh, with specialized tender management, compliance tracking, and financial operations.
+A comprehensive multi-module management platform for construction and contracting firms in Bangladesh. Handle offices, projects, procurement, officers directory, documents, banking, compliance, and team operations in one unified system.
+
+Big Office combines powerful features across six major modules: **Tenders & Procurement**, **Project Tracking**, **Officers & Team Directory**, **Document Management**, **Financial & Banking Operations**, and **Compliance & Licensing**. Designed specifically for construction firms to manage the complete business lifecycle from tender discovery to project completion.
 
 > ⚠️ **Production Note**: This is a demo system. Before deploying to production, implement proper password hashing (bcrypt) and SSL/TLS. See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 

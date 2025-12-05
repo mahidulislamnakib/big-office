@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Officers Directory - Big Office">
+  <title>Officers Directory - Big Office</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7f9;
+      color: #333;
+    }
+    
+    .topbar {
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
+      color: white;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .btn-back {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    
+    .btn-back:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    .page-header {
+      margin-bottom: 32px;
+    }
+    
+    .page-header h1 {
+      font-size: 32px;
+      color: #2c7a3a;
+      margin-bottom: 8px;
+    }
+    
+    .page-header p {
+      color: #666;
+      font-size: 16px;
+    }
+    
+    .page-header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+    
+    .page-header-text {
+      flex: 1;
+    }
+    
+    .btn-add {
+      padding: 12px 24px;
+      background: #2c7a3a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-add:hover {
+      background: #1e5528;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(44, 122, 58, 0.3);
+    }
+    
+    .btn-export {
+      padding: 10px 20px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-export:hover {
+      background: #1976D2;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+    }
+    
+    .filters-container {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+    
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .advanced-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .filter-group label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .filter-group input,
+    .filter-group select {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    
+    .filter-group input:focus,
+    .filter-group select:focus {
+      outline: none;
+      border-color: #2c7a3a;
+    }
+    
+    .filter-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+    
+    .btn-filter-toggle,
+    .btn-clear {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-filter-toggle:hover,
+    .btn-clear:hover {
+      background: #f5f5f5;
+      border-color: #2c7a3a;
+    }
+    
+    .sort-bar {
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .sort-bar label {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .sort-bar select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      flex: 1;
+      max-width: 300px;
+    }
+    
+    .result-count {
+      margin-left: auto;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .officers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .officer-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 24px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    
+    .officer-card:hover {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    
+    .officer-link {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      cursor: pointer;
+    }
+    
+    .officer-link:hover .officer-name {
+      color: #6fb93b;
+    }
+    
+    .officer-actions {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .officer-card:hover .officer-actions {
+      opacity: 1;
+    }
+    
+    .btn-action {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .btn-edit {
+      background: #3498db;
+      color: white;
+    }
+    
+    .btn-edit:hover {
+      background: #2980b9;
+      transform: scale(1.1);
+    }
+    
+    .btn-delete {
+      background: #e74c3c;
+      color: white;
+    }
+    
+    .btn-delete:hover {
+      background: #c0392b;
+      transform: scale(1.1);
+    }
+    
+    .officer-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: white;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    
+    .officer-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c7a3a;
+      margin-bottom: 4px;
+    }
+    
+    .officer-bangla {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 12px;
+    }
+    
+    .officer-designation {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .officer-office {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 12px;
+    }
+    
+    .officer-contact {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: #666;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+    }
+    
+    .officer-contact span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    
+    .badge-active {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .badge-leave {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+    
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    
+    .pagination button {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .pagination button:hover:not(:disabled) {
+      background: #2c7a3a;
+      color: white;
+      border-color: #2c7a3a;
+    }
+    
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .pagination span {
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      font-size: 18px;
+      color: #666;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2c7a3a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .empty-state .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+    
+    .empty-state h3 {
+      font-size: 20px;
+      color: #999;
+      margin-bottom: 8px;
+    }
+    
+    .empty-state p {
+      color: #bbb;
+    }
+    
+    /* Smooth transitions for cards */
+    .officer-card {
+      animation: fadeInUp 0.4s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Focus states for accessibility */
+    .btn:focus,
+    .btn-back:focus,
+    .btn-add:focus,
+    button:focus,
+    input:focus,
+    select:focus {
+      outline: 2px solid #2c7a3a;
+      outline-offset: 2px;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 16px;
+        height: 56px;
+      }
+      
+      .logo {
+        font-size: 16px;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+      
+      .page-header h1 {
+        font-size: 24px;
+      }
+      
+      .filters {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+      
+      .officers-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      .officer-card {
+        padding: 20px;
+      }
+    }
+    
+    /* ===============================================
+       RESPONSIVE DESIGN - MOBILE & TABLET
+       =============================================== */
+    
+    /* Tablet (768px and below) */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 16px;
+        height: 56px;
+      }
+      
+      .logo {
+        font-size: 18px;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+      
+      .page-header h1 {
+        font-size: 24px;
+      }
+      
+      .page-header p {
+        font-size: 14px;
+      }
+      
+      .page-header-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      
+      .btn-add {
+        width: 100%;
+        text-align: center;
+      }
+      
+      .filters-container {
+        padding: 16px;
+      }
+      
+      .filters {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .advanced-filters {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .filter-actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .filter-actions button {
+        width: 100%;
+      }
+      
+      .sort-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      
+      .sort-bar select {
+        width: 100%;
+      }
+      
+      .officers-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      .officer-card {
+        padding: 16px;
+      }
+      
+      .pagination {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .pagination button {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+    }
+    
+    /* Mobile (480px and below) */
+    @media (max-width: 480px) {
+      .topbar {
+        padding: 0 12px;
+        height: 52px;
+      }
+      
+      .logo {
+        font-size: 16px;
+        gap: 6px;
+      }
+      
+      .topbar-right {
+        gap: 8px;
+      }
+      
+      .btn-back {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      
+      .container {
+        padding: 12px;
+      }
+      
+      .page-header h1 {
+        font-size: 20px;
+        margin-bottom: 6px;
+      }
+      
+      .page-header p {
+        font-size: 13px;
+      }
+      
+      .btn-add {
+        padding: 10px 20px;
+        font-size: 14px;
+      }
+      
+      .filters-container {
+        padding: 12px;
+      }
+      
+      .filters input,
+      .filters select,
+      .advanced-filters input,
+      .advanced-filters select {
+        font-size: 14px;
+        padding: 10px;
+      }
+      
+      .officer-card {
+        padding: 12px;
+      }
+      
+      .officer-photo {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+        margin-bottom: 12px;
+      }
+      
+      .officer-name {
+        font-size: 16px;
+      }
+      
+      .officer-designation {
+        font-size: 13px;
+      }
+      
+      .officer-office {
+        font-size: 12px;
+      }
+      
+      .officer-contact {
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+      }
+      
+      .pagination {
+        gap: 6px;
+      }
+      
+      .pagination button {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      
+      .pagination span {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">
+      🏢 <span>Big Office - Officers Directory</span>
+    </div>
+    <div class="topbar-right">
+      <a href="/app" class="btn-back">← Back to Dashboard</a>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="page-header-actions">
+      <div class="page-header-text">
+        <h1>Officers Directory</h1>
+        <p>Complete personnel management and directory</p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button id="exportExcelBtn" class="btn-export" style="display: none;">
+          📊 Export Excel
+        </button>
+        <a href="/officers/new" class="btn-add" id="addOfficerBtn" style="display: none;">
+          <span>+</span> Add Officer
+        </a>
+      </div>
+    </div>
+    
+    <div class="filters-container">
+      <div class="filters">
+        <div class="filter-group">
+          <label for="searchInput">🔍 Search</label>
+          <input type="text" id="searchInput" placeholder="Name, ID, phone, email, NID..." aria-label="Search officers by name, ID, phone, email, or NID" />
+        </div>
+        
+        <div class="filter-group">
+          <label for="designationFilter">📋 Designation</label>
+          <select id="designationFilter" aria-label="Filter by designation">
+            <option value="">All Designations</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="officeFilter">🏢 Office</label>
+          <select id="officeFilter" aria-label="Filter by office">
+            <option value="">All Offices</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="positionFilter">👤 Position</label>
+          <select id="positionFilter" aria-label="Filter by position">
+            <option value="">All Positions</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="statusFilter">✅ Status</label>
+          <select id="statusFilter" aria-label="Filter by status">
+            <option value="active">Active Only</option>
+            <option value="">All Status</option>
+            <option value="on_leave">On Leave</option>
+            <option value="suspended">Suspended</option>
+            <option value="retired">Retired</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="advanced-filters" id="advancedFilters" style="display: none;">
+        <div class="filter-group">
+          <label for="genderFilter">👥 Gender</label>
+          <select id="genderFilter" aria-label="Filter by gender">
+            <option value="">All</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="districtFilter">📍 District</label>
+          <select id="districtFilter" aria-label="Filter by district">
+            <option value="">All Districts</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>🗺️ Division</label>
+          <select id="divisionFilter">
+            <option value="">All Divisions</option>
+            <option value="Dhaka">Dhaka</option>
+            <option value="Chittagong">Chittagong</option>
+            <option value="Rajshahi">Rajshahi</option>
+            <option value="Khulna">Khulna</option>
+            <option value="Barisal">Barisal</option>
+            <option value="Sylhet">Sylhet</option>
+            <option value="Rangpur">Rangpur</option>
+            <option value="Mymensingh">Mymensingh</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>📅 Joining From</label>
+          <input type="date" id="joiningFromFilter">
+        </div>
+        
+        <div class="filter-group">
+          <label>📅 Joining To</label>
+          <input type="date" id="joiningToFilter">
+        </div>
+      </div>
+      
+      <div class="filter-actions">
+        <button id="toggleAdvancedBtn" class="btn-filter-toggle">
+          🔽 Advanced Filters
+        </button>
+        <button id="clearFiltersBtn" class="btn-clear">
+          🗑️ Clear All
+        </button>
+      </div>
+    </div>
+    
+    <div class="sort-bar">
+      <label>Sort by:</label>
+      <select id="sortBy">
+        <option value="full_name">Name (A-Z)</option>
+        <option value="full_name|desc">Name (Z-A)</option>
+        <option value="employee_id">Employee ID</option>
+        <option value="joining_date">Joining Date (Old-New)</option>
+        <option value="joining_date|desc">Joining Date (New-Old)</option>
+        <option value="current_grade">Grade (Low-High)</option>
+        <option value="current_grade|desc">Grade (High-Low)</option>
+        <option value="designation_title">Designation</option>
+        <option value="office_name">Office</option>
+      </select>
+      <span id="resultCount" class="result-count"></span>
+    </div>
+    
+    <div id="loadingState" class="loading" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <span>Loading officers...</span>
+    </div>
+    
+    <div id="officersContainer" class="officers-grid" style="display: none;" role="list">
+      <!-- Officers will be loaded here -->
+    </div>
+    
+    <div id="emptyState" class="empty-state" style="display: none;" role="status">
+      <div class="icon" aria-hidden="true">👥</div>
+      <h3>No officers found</h3>
+      <p>Try adjusting your filters</p>
+    </div>
+    
+    <div id="paginationContainer" class="pagination" style="display: none;" role="navigation" aria-label="Officers pagination">
+      <button id="prevBtn" onclick="changePage(-1)" aria-label="Go to previous page">← Previous</button>
+      <span id="pageInfo" aria-live="polite"></span>
+      <button id="nextBtn" onclick="changePage(1)" aria-label="Go to next page">Next →</button>
+    </div>
+  </div>
+  
+  <script>
+    // Authentication check
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = '/login';
+    }
+    
+    // Show Add Officer and Export buttons for HR/Admin
+    const userRole = localStorage.getItem('userRole');
+    if (['admin', 'hr'].includes(userRole)) {
+      document.getElementById('addOfficerBtn').style.display = 'inline-flex';
+      document.getElementById('exportExcelBtn').style.display = 'inline-flex';
+    }
+    
+    let currentPage = 1;
+    let totalPages = 1;
+    let searchTimeout;
+    
+    // Fetch with authentication
+    async function fetchWithAuth(url, options = {}) {
+      const token = localStorage.getItem('accessToken');
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch(url, { ...options, headers });
+      
+      if (response.status === 401) {
+        localStorage.clear();
+        window.location.href = '/login';
+        throw new Error('Session expired');
+      }
+      
+      return response;
+    }
+    
+    // Load designations for filter
+    async function loadDesignations() {
+      try {
+        const response = await fetchWithAuth('/api/designations');
+        const designations = await response.json();
+        
+        const select = document.getElementById('designationFilter');
+        designations.forEach(d => {
+          const option = document.createElement('option');
+          option.value = d.id;
+          option.textContent = d.title;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load designations:', err);
+      }
+    }
+    
+    // Load offices for filter
+    async function loadOffices() {
+      try {
+        const response = await fetchWithAuth('/api/offices');
+        const offices = await response.json();
+        
+        const select = document.getElementById('officeFilter');
+        offices.forEach(o => {
+          const option = document.createElement('option');
+          option.value = o.id;
+          option.textContent = `${o.office_name} (${o.office_code})`;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load offices:', err);
+      }
+    }
+    
+    // Load officers
+    async function loadOfficers(page = 1) {
+      try {
+        document.getElementById('loadingState').style.display = 'block';
+        document.getElementById('officersContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('paginationContainer').style.display = 'none';
+        
+        const search = document.getElementById('searchInput').value;
+        const designation = document.getElementById('designationFilter').value;
+        const office = document.getElementById('officeFilter').value;
+        const position = document.getElementById('positionFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const gender = document.getElementById('genderFilter').value;
+        const district = document.getElementById('districtFilter').value;
+        const division = document.getElementById('divisionFilter').value;
+        const joiningFrom = document.getElementById('joiningFromFilter').value;
+        const joiningTo = document.getElementById('joiningToFilter').value;
+        
+        // Get sort settings
+        const sortValue = document.getElementById('sortBy').value;
+        const [sortBy, sortOrder] = sortValue.includes('|') ? sortValue.split('|') : [sortValue, 'asc'];
+        
+        const params = new URLSearchParams({
+          page,
+          limit: 12,
+          sort_by: sortBy,
+          sort_order: sortOrder
+        });
+        
+        if (search) params.append('search', search);
+        if (designation) params.append('designation_id', designation);
+        if (office) params.append('office_id', office);
+        if (position) params.append('position_id', position);
+        if (status) params.append('status', status);
+        if (gender) params.append('gender', gender);
+        if (district) params.append('district', district);
+        if (division) params.append('division', division);
+        if (joiningFrom) params.append('joining_date_from', joiningFrom);
+        if (joiningTo) params.append('joining_date_to', joiningTo);
+        
+        const response = await fetchWithAuth(`/api/officers?${params}`);
+        const data = await response.json();
+        
+        currentPage = data.pagination.page;
+        totalPages = data.pagination.pages;
+        
+        // Update result count
+        document.getElementById('resultCount').textContent = 
+          `${data.pagination.total} officer${data.pagination.total !== 1 ? 's' : ''} found`;
+        
+        document.getElementById('loadingState').style.display = 'none';
+        
+        if (data.officers.length === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+        } else {
+          renderOfficers(data.officers);
+          renderPagination(data.pagination);
+        }
+      } catch (err) {
+        console.error('Failed to load officers:', err);
+        document.getElementById('loadingState').innerHTML = '<p style="color: red;">❌ Failed to load officers</p>';
+      }
+    }
+    
+    // Render officers cards
+    function renderOfficers(officers) {
+      const container = document.getElementById('officersContainer');
+      container.innerHTML = '';
+      container.style.display = 'grid';
+      
+      officers.forEach(officer => {
+        const card = document.createElement('div');
+        card.className = 'officer-card';
+        
+        const initials = officer.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        
+        const statusBadge = officer.employment_status === 'active' 
+          ? '<span class="badge badge-active">Active</span>'
+          : '<span class="badge badge-leave">On Leave</span>';
+        
+        card.innerHTML = `
+          <a href="/officers/${officer.id}" class="officer-link">
+            <div class="officer-photo">${initials}</div>
+            <div class="officer-name">${officer.full_name}</div>
+            ${officer.name_bangla ? `<div class="officer-bangla">${officer.name_bangla}</div>` : ''}
+            <div class="officer-designation">${officer.designation_title || 'N/A'}</div>
+            <div class="officer-office">🏢 ${officer.office_name || 'Not assigned'} ${officer.office_code ? `(${officer.office_code})` : ''}</div>
+            <div class="officer-contact">
+              ${officer.personal_mobile ? `<span>📱 ${officer.personal_mobile}</span>` : ''}
+              ${officer.personal_email ? `<span>✉️ ${officer.personal_email.substring(0, 20)}${officer.personal_email.length > 20 ? '...' : ''}</span>` : ''}
+            </div>
+            ${statusBadge}
+          </a>
+          <div class="officer-actions">
+            <button onclick="editOfficer('${officer.id}')" class="btn-action btn-edit" title="Edit Officer">
+              <span>✏️</span>
+            </button>
+            <button onclick="deleteOfficer('${officer.id}', '${officer.full_name.replace(/'/g, "\\'")}')" class="btn-action btn-delete" title="Delete Officer">
+              <span>🗑️</span>
+            </button>
+          </div>
+        `;
+        
+        container.appendChild(card);
+      });
+    }
+    
+    // Render pagination
+    function renderPagination(pagination) {
+      const container = document.getElementById('paginationContainer');
+      container.style.display = 'flex';
+      
+      document.getElementById('pageInfo').textContent = 
+        `Page ${pagination.page} of ${pagination.pages} (${pagination.total} total)`;
+      
+      document.getElementById('prevBtn').disabled = pagination.page === 1;
+      document.getElementById('nextBtn').disabled = pagination.page === pagination.pages;
+    }
+    
+    // Change page
+    function changePage(direction) {
+      const newPage = currentPage + direction;
+      if (newPage >= 1 && newPage <= totalPages) {
+        loadOfficers(newPage);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+    
+    // Load positions
+    async function loadPositions() {
+      try {
+        const positions = await fetchWithAuth('/api/positions');
+        const select = document.getElementById('positionFilter');
+        positions.forEach(pos => {
+          const option = document.createElement('option');
+          option.value = pos.id;
+          option.textContent = pos.title;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load positions:', err);
+      }
+    }
+    
+    // Load districts
+    async function loadDistricts() {
+      try {
+        const response = await fetchWithAuth('/api/officers?limit=1000');
+        const data = await response.json();
+        const districts = [...new Set(data.officers.map(o => o.district).filter(d => d))].sort();
+        const select = document.getElementById('districtFilter');
+        districts.forEach(district => {
+          const option = document.createElement('option');
+          option.value = district;
+          option.textContent = district;
+          select.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Failed to load districts:', err);
+      }
+    }
+    
+    // Toggle advanced filters
+    document.getElementById('toggleAdvancedBtn').addEventListener('click', () => {
+      const advanced = document.getElementById('advancedFilters');
+      const btn = document.getElementById('toggleAdvancedBtn');
+      if (advanced.style.display === 'none') {
+        advanced.style.display = 'grid';
+        btn.textContent = '🔼 Hide Advanced';
+      } else {
+        advanced.style.display = 'none';
+        btn.textContent = '🔽 Advanced Filters';
+      }
+    });
+    
+    // Clear all filters
+    document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('designationFilter').value = '';
+      document.getElementById('officeFilter').value = '';
+      document.getElementById('positionFilter').value = '';
+      document.getElementById('statusFilter').value = 'active';
+      document.getElementById('genderFilter').value = '';
+      document.getElementById('districtFilter').value = '';
+      document.getElementById('divisionFilter').value = '';
+      document.getElementById('joiningFromFilter').value = '';
+      document.getElementById('joiningToFilter').value = '';
+      document.getElementById('sortBy').value = 'full_name';
+      currentPage = 1;
+      loadOfficers(1);
+    });
+    
+    // Export to Excel
+    document.getElementById('exportExcelBtn').addEventListener('click', async () => {
+      try {
+        const search = document.getElementById('searchInput').value;
+        const designation = document.getElementById('designationFilter').value;
+        const office = document.getElementById('officeFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (designation) params.append('designation_id', designation);
+        if (office) params.append('office_id', office);
+        if (status) params.append('status', status);
+        
+        const token = localStorage.getItem('token');
+        window.location.href = `/api/officers/export/excel?${params}&token=${token}`;
+      } catch (err) {
+        alert('Failed to export: ' + err.message);
+      }
+    });
+    
+    // Debounced search
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentPage = 1;
+        loadOfficers(1);
+      }, 500);
+    });
+    
+    // Edit officer function
+    window.editOfficer = function(officerId) {
+      window.location.href = `/officers/${officerId}/edit`;
+    };
+    
+    // Delete officer function
+    window.deleteOfficer = async function(officerId, officerName) {
+      if (!confirm(`Are you sure you want to delete ${officerName}?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          if (response.status === 409) {
+            // Has dependencies
+            const deps = data.dependencies;
+            let message = `Cannot delete ${officerName}.\n\nThis officer has:\n`;
+            if (deps.transfers) message += `- ${deps.transfers} transfer record(s)\n`;
+            if (deps.promotions) message += `- ${deps.promotions} promotion record(s)\n`;
+            if (deps.documents) message += `- ${deps.documents} document(s)\n`;
+            if (deps.tenders) message += `- ${deps.tenders} tender(s)\n`;
+            if (deps.projects) message += `- ${deps.projects} project(s)\n`;
+            message += '\nPlease remove or reassign these records first.';
+            alert(message);
+          } else {
+            throw new Error(data.error || 'Failed to delete officer');
+          }
+          return;
+        }
+        
+        alert('✅ Officer deleted successfully');
+        loadOfficers(currentPage);
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('❌ Failed to delete officer: ' + err.message);
+      }
+    };
+    
+    // Filter change handlers
+    ['designationFilter', 'officeFilter', 'positionFilter', 'statusFilter', 
+     'genderFilter', 'districtFilter', 'divisionFilter', 
+     'joiningFromFilter', 'joiningToFilter', 'sortBy'].forEach(id => {
+      document.getElementById(id).addEventListener('change', () => {
+        currentPage = 1;
+        loadOfficers(1);
+      });
+    });
+    
+    // Initialize
+    loadDesignations();
+    loadOffices();
+    loadPositions();
+    loadDistricts();
+    loadOfficers();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Officer Profile - Big Office">
+  <title>Officer Profile - Big Office</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7f9;
+      color: #333;
+    }
+    
+    .topbar {
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
+      color: white;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .logo {
+      font-size: 20px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .btn-back {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    
+    .btn-back:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .btn-edit {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.95);
+      color: #2c7a3a;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.3s;
+      display: none;
+    }
+    
+    .btn-edit:hover {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    
+    .modal-content {
+      background-color: white;
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 12px;
+      max-width: 600px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .modal-header {
+      padding: 24px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #2c7a3a;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #999;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+    
+    .modal-close:hover {
+      color: #333;
+    }
+    
+    .modal-content form {
+      padding: 24px;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #333;
+      font-size: 14px;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #2c7a3a;
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+    }
+    
+    .btn-secondary {
+      padding: 10px 20px;
+      background: #f5f5f5;
+      color: #666;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .btn-primary {
+      padding: 10px 20px;
+      background: #2c7a3a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary:hover {
+      background: #235f2e;
+    }
+    
+    .timeline-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .btn-action {
+      padding: 10px 20px;
+      background: #2c7a3a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: none;
+    }
+    
+    .btn-action:hover {
+      background: #235f2e;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(44, 122, 58, 0.3);
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    
+    .profile-header {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 32px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+    }
+    
+    .profile-photo {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: white;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .profile-info {
+      flex: 1;
+    }
+    
+    .profile-name {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c7a3a;
+      margin-bottom: 4px;
+    }
+    
+    .profile-bangla {
+      font-size: 18px;
+      color: #999;
+      margin-bottom: 16px;
+    }
+    
+    .profile-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    
+    .meta-label {
+      color: #999;
+    }
+    
+    .meta-value {
+      color: #333;
+      font-weight: 500;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    
+    .badge-active {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: white;
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    
+    .tab-btn {
+      padding: 12px 24px;
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+    
+    .tab-btn:hover {
+      background: rgba(44, 122, 58, 0.1);
+      color: #2c7a3a;
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #2c7a3a, #6fb93b);
+      color: white;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .card h3 {
+      font-size: 18px;
+      color: #2c7a3a;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+    }
+    
+    .info-label {
+      font-size: 12px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+      font-size: 15px;
+      color: #333;
+      font-weight: 500;
+    }
+    
+    /* Field masking styles */
+    .masked-field {
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+      color: #666 !important;
+      font-weight: 400 !important;
+    }
+    
+    .btn-toggle-mask {
+      position: absolute;
+      top: 20px;
+      right: 0;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      color: #666;
+      padding: 0;
+    }
+    
+    .btn-toggle-mask:hover {
+      background: #2c7a3a;
+      border-color: #2c7a3a;
+      color: white;
+      transform: scale(1.05);
+    }
+    
+    .btn-toggle-mask svg {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .info-item:not(:has(.btn-toggle-mask)) .info-value {
+      padding-right: 0;
+    }
+    
+    .info-item:has(.btn-toggle-mask) .info-value {
+      padding-right: 40px;
+    }
+    
+    /* Filter chips */
+    .filter-chip {
+      padding: 8px 16px;
+      border: 2px solid #e0e0e0;
+      background: white;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .filter-chip:hover {
+      border-color: #2c7a3a;
+      background: #f0f8f0;
+    }
+    
+    .filter-chip.active {
+      background: #2c7a3a;
+      color: white;
+      border-color: #2c7a3a;
+    }
+    
+    /* Deed cards */
+    .deed-card {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.3s;
+    }
+    
+    .deed-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .deed-card.good {
+      border-left: 4px solid #27ae60;
+    }
+    
+    .deed-card.bad {
+      border-left: 4px solid #e74c3c;
+    }
+    
+    .deed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    
+    .deed-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    
+    .deed-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+      color: #666;
+      flex-wrap: wrap;
+    }
+    
+    .deed-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .deed-badge.verified {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .deed-badge.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .deed-badge.rejected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .timeline {
+      position: relative;
+      padding-left: 40px;
+    }
+    
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e0e0e0;
+    }
+    
+    .timeline-item {
+      position: relative;
+      padding-bottom: 32px;
+    }
+    
+    .timeline-item:last-child {
+      padding-bottom: 0;
+    }
+    
+    .timeline-dot {
+      position: absolute;
+      left: -29px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #2c7a3a;
+      border: 3px solid white;
+      box-shadow: 0 0 0 2px #2c7a3a;
+    }
+    
+    .timeline-dot.promotion {
+      background: #ff9800;
+      box-shadow: 0 0 0 2px #ff9800;
+    }
+    
+    .timeline-content {
+      background: #f9f9f9;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 3px solid #2c7a3a;
+    }
+    
+    .timeline-content.promotion {
+      border-left-color: #ff9800;
+    }
+    
+    .timeline-date {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 8px;
+    }
+    
+    .timeline-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    
+    .timeline-desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    .documents-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    
+    .document-card {
+      background: #f9f9f9;
+      padding: 16px;
+      border-radius: 8px;
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative;
+      border: 2px solid transparent;
+    }
+    
+    .document-card:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      border-color: #2c7a3a;
+      box-shadow: 0 4px 12px rgba(44, 122, 58, 0.15);
+    }
+    
+    .doc-delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 59, 48, 0.9);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+    
+    .doc-delete-btn:hover {
+      background: rgba(255, 59, 48, 1);
+      transform: scale(1.1);
+    }
+    
+    .document-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    
+    .document-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+      padding-right: 32px;
+    }
+    
+    .document-type {
+      font-size: 12px;
+      color: #666;
+      background: #e0e0e0;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+    
+    .document-meta {
+      font-size: 11px;
+      color: #999;
+      margin-top: 8px;
+      display: flex;
+      gap: 12px;
+    }
+    
+    .document-dates {
+      font-size: 11px;
+      color: #2c7a3a;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .related-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .related-item {
+      background: #f9f9f9;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #2c7a3a;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    
+    .related-item:hover {
+      background: #f0f0f0;
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .related-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+    
+    .related-item-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+      flex: 1;
+    }
+    
+    .related-item-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+    
+    .status-discovered { background: #E3F2FD; color: #1976D2; }
+    .status-preparing { background: #FFF3E0; color: #F57C00; }
+    .status-submitted { background: #E8F5E9; color: #388E3C; }
+    .status-won { background: #C8E6C9; color: #2E7D32; }
+    .status-ongoing { background: #FFF9C4; color: #F57F17; }
+    .status-completed { background: #B2DFDB; color: #00796B; }
+    
+    .related-item-desc {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    
+    .related-item-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: #999;
+    }
+    
+    .document-item {
+      background: #f9f9f9;
+      padding: 16px;
+      border-radius: 8px;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .document-item:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      font-size: 18px;
+      color: #666;
+    }
+    
+    .empty-message {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+      font-size: 15px;
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 16px;
+        height: 56px;
+      }
+      
+      .logo {
+        font-size: 16px;
+      }
+      
+      .logo span {
+        display: none;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+      
+      .profile-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 24px;
+      }
+      
+      .profile-photo {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+      }
+      
+      .profile-name {
+        font-size: 22px;
+      }
+      
+      .profile-meta {
+        grid-template-columns: 1fr;
+      }
+      
+      .tabs {
+        overflow-x: scroll;
+      }
+      
+      .tab-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+      }
+      
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .timeline {
+        padding-left: 30px;
+      }
+      
+      .timeline-dot {
+        left: -24px;
+      }
+      
+      .documents-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* ===============================================
+       LOADING & ANIMATIONS
+       =============================================== */
+    
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2c7a3a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .profile-container {
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    /* Focus states for accessibility */
+    .btn:focus,
+    .btn-back:focus,
+    button:focus,
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid #2c7a3a;
+      outline-offset: 2px;
+    }
+    
+    .tabs button:focus {
+      outline: 2px solid #2c7a3a;
+      outline-offset: -2px;
+    }
+    
+    /* ===============================================
+       ADDITIONAL RESPONSIVE ENHANCEMENTS
+       =============================================== */
+    
+    /* Tablet (768px and below) */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 0 16px;
+        height: 56px;
+      }
+      
+      .logo {
+        font-size: 18px;
+      }
+      
+      .container {
+        padding: 16px;
+      }
+      
+      .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+      
+      .profile-photo {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+      }
+      
+      .profile-info h1 {
+        font-size: 24px;
+      }
+      
+      .profile-info h2 {
+        font-size: 16px;
+      }
+      
+      .profile-meta {
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .profile-actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      
+      .profile-actions .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .tabs button {
+        padding: 10px 16px;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+      
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .related-item {
+        padding: 12px;
+      }
+      
+      .related-item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .related-item-meta {
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+    
+    /* Mobile (480px and below) */
+    @media (max-width: 480px) {
+      .topbar {
+        padding: 0 12px;
+        height: 52px;
+      }
+      
+      .logo {
+        font-size: 16px;
+        gap: 6px;
+      }
+      
+      .topbar-right {
+        gap: 8px;
+      }
+      
+      .btn-back {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      
+      .container {
+        padding: 12px;
+      }
+      
+      .profile-photo {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+      }
+      
+      .profile-info h1 {
+        font-size: 20px;
+      }
+      
+      .profile-info h2 {
+        font-size: 14px;
+      }
+      
+      .profile-meta span {
+        font-size: 13px;
+      }
+      
+      .tabs button {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+      
+      .tab-content {
+        padding: 16px;
+      }
+      
+      .info-label {
+        font-size: 12px;
+      }
+      
+      .info-value {
+        font-size: 14px;
+      }
+      
+      .timeline-item {
+        padding-left: 32px;
+      }
+      
+      .timeline-dot {
+        left: -20px;
+        width: 12px;
+        height: 12px;
+      }
+      
+      .timeline-date {
+        font-size: 12px;
+      }
+      
+      .timeline-title {
+        font-size: 14px;
+      }
+      
+      .timeline-details {
+        font-size: 12px;
+      }
+      
+      .document-card {
+        padding: 12px;
+      }
+      
+      .document-name {
+        font-size: 14px;
+      }
+      
+      .document-dates {
+        font-size: 11px;
+      }
+      
+      .related-item-title {
+        font-size: 14px;
+      }
+      
+      .related-item-desc {
+        font-size: 12px;
+      }
+      
+      .related-item-meta span {
+        font-size: 11px;
+      }
+      
+      .related-item-status {
+        font-size: 11px;
+        padding: 3px 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">
+      👤 <span>Officer Profile</span>
+    </div>
+    <div class="topbar-right">
+      <a href="#" id="editBtn" class="btn-edit">✏️ Edit Officer</a>
+      <a href="/officers" class="btn-back">← Back to List</a>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div id="loadingState" class="loading">
+      Loading officer profile...
+    </div>
+    
+    <div id="profileContainer" style="display: none;">
+      <!-- Profile Header -->
+      <div class="profile-header">
+        <div class="profile-photo" id="profilePhoto">?</div>
+        <div class="profile-info">
+          <div id="profileStatus"></div>
+          <h1 class="profile-name" id="profileName">-</h1>
+          <div class="profile-bangla" id="profileBangla"></div>
+          
+          <div class="profile-meta">
+            <div class="meta-item">
+              <span class="meta-label">🆔 Employee ID:</span>
+              <span class="meta-value" id="employeeId">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">💼 Designation:</span>
+              <span class="meta-value" id="designation">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">🏢 Office:</span>
+              <span class="meta-value" id="office">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">📅 Joining Date:</span>
+              <span class="meta-value" id="joiningDate">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Tabs -->
+      <div class="tabs" role="tablist" aria-label="Officer information tabs">
+        <button class="tab-btn active" onclick="switchTab('overview')" role="tab" aria-selected="true" aria-controls="tab-overview" id="tab-btn-overview">📋 Overview</button>
+        <button class="tab-btn" onclick="switchTab('timeline')" role="tab" aria-selected="false" aria-controls="tab-timeline" id="tab-btn-timeline">⏱️ Timeline</button>
+        <button class="tab-btn" onclick="switchTab('deeds')" role="tab" aria-selected="false" aria-controls="tab-deeds" id="tab-btn-deeds">⭐ Performance</button>
+        <button class="tab-btn" onclick="switchTab('documents')" role="tab" aria-selected="false" aria-controls="tab-documents" id="tab-btn-documents">📄 Documents</button>
+        <button class="tab-btn" onclick="switchTab('related')" role="tab" aria-selected="false" aria-controls="tab-related" id="tab-btn-related">🔗 Related Work</button>
+      </div>
+      
+      <!-- Overview Tab -->
+      <div id="tab-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
+        <div class="card">
+          <h3>📞 Contact Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Personal Mobile</span>
+              <span class="info-value masked-field" id="personalMobile">-</span>
+              <button class="btn-toggle-mask" onclick="toggleFieldVisibility('personalMobile', document.getElementById('personalMobile').dataset.original, maskPhone)" title="Show/Hide full number">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Official Mobile</span>
+              <span class="info-value masked-field" id="officialMobile">-</span>
+              <button class="btn-toggle-mask" onclick="toggleFieldVisibility('officialMobile', document.getElementById('officialMobile').dataset.original, maskPhone)" title="Show/Hide full number">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Personal Email</span>
+              <span class="info-value masked-field" id="personalEmail">-</span>
+              <button class="btn-toggle-mask" onclick="toggleFieldVisibility('personalEmail', document.getElementById('personalEmail').dataset.original, maskEmail)" title="Show/Hide full email">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Official Email</span>
+              <span class="info-value masked-field" id="officialEmail">-</span>
+              <button class="btn-toggle-mask" onclick="toggleFieldVisibility('officialEmail', document.getElementById('officialEmail').dataset.original, maskEmail)" title="Show/Hide full email">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Emergency Contact</span>
+              <span class="info-value" id="emergencyContact">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Emergency Contact Name</span>
+              <span class="info-value" id="emergencyContactName">-</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>🆔 Personal Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Father's Name</span>
+              <span class="info-value" id="fatherName">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Date of Birth</span>
+              <span class="info-value" id="dateOfBirth">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Gender</span>
+              <span class="info-value" id="gender">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Blood Group</span>
+              <span class="info-value" id="bloodGroup">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">NID Number</span>
+              <span class="info-value masked-field" id="nidNumber">-</span>
+              <button class="btn-toggle-mask" onclick="toggleFieldVisibility('nidNumber', document.getElementById('nidNumber').dataset.original, maskNID)" title="Show/Hide full NID">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Religion</span>
+              <span class="info-value" id="religion">-</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>🏠 Address</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Present Address</span>
+              <span class="info-value" id="presentAddress">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Permanent Address</span>
+              <span class="info-value" id="permanentAddress">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">District</span>
+              <span class="info-value" id="district">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Division</span>
+              <span class="info-value" id="division">-</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>💼 Employment Details</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Position</span>
+              <span class="info-value" id="position">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Department</span>
+              <span class="info-value" id="department">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Current Grade</span>
+              <span class="info-value" id="currentGrade">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Basic Salary</span>
+              <span class="info-value masked-field" id="basicSalary">-</span>
+              <button class="btn-toggle-mask" onclick="toggleFieldVisibility('basicSalary', document.getElementById('basicSalary').dataset.original, () => '৳ XXX,XXX')" title="Show/Hide salary">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Employment Type</span>
+              <span class="info-value" id="employmentType">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Confirmation Date</span>
+              <span class="info-value" id="confirmationDate">-</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>🎓 Education & Skills</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Education Qualification</span>
+              <span class="info-value" id="education">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Training Courses</span>
+              <span class="info-value" id="training">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Skills</span>
+              <span class="info-value" id="skills">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Languages Known</span>
+              <span class="info-value" id="languages">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Timeline Tab -->
+      <div id="tab-timeline" class="tab-content">
+        <div class="card">
+          <h3>⏱️ Career Timeline</h3>
+          
+          <!-- Action Buttons for HR/Admin -->
+          <div class="timeline-actions">
+            <button class="btn-action" id="btnRecordTransfer" onclick="openTransferModal()">
+              🔄 Record Transfer
+            </button>
+            <button class="btn-action" id="btnRecordPromotion" onclick="openPromotionModal()">
+              ⬆️ Record Promotion
+            </button>
+          </div>
+          
+          <div id="timelineContainer" class="timeline">
+            <!-- Timeline will be loaded here -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Performance/Deeds Tab -->
+      <div id="tab-deeds" class="tab-content">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div>
+              <h3>⭐ Performance & Conduct Record</h3>
+              <p style="color: #666; font-size: 14px; margin-top: 4px;">Track good deeds and incidents</p>
+            </div>
+            <button class="btn-action btn-primary" onclick="showAddDeedModal()" id="btnAddDeed" style="display: none;">
+              + Record Deed
+            </button>
+          </div>
+          
+          <!-- Performance Summary -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);">
+              <div style="font-size: 32px; font-weight: bold;" id="goodDeedsCount">0</div>
+              <div style="font-size: 14px; opacity: 0.9;">Good Deeds</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);">
+              <div style="font-size: 32px; font-weight: bold;" id="badDeedsCount">0</div>
+              <div style="font-size: 14px; opacity: 0.9;">Incidents</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);">
+              <div style="font-size: 32px; font-weight: bold;" id="totalPoints">0</div>
+              <div style="font-size: 14px; opacity: 0.9;">Total Points</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);">
+              <div style="font-size: 18px; font-weight: bold; text-transform: capitalize;" id="performanceRating">-</div>
+              <div style="font-size: 14px; opacity: 0.9;">Rating</div>
+            </div>
+          </div>
+          
+          <!-- Deed Filters -->
+          <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+            <button class="filter-chip active" onclick="filterDeeds('all')" id="filter-all">All</button>
+            <button class="filter-chip" onclick="filterDeeds('good')" id="filter-good">✅ Good Deeds</button>
+            <button class="filter-chip" onclick="filterDeeds('bad')" id="filter-bad">❌ Incidents</button>
+            <button class="filter-chip" onclick="filterDeeds('pending')" id="filter-pending">⏳ Pending Review</button>
+          </div>
+          
+          <!-- Deeds List -->
+          <div id="deedsContainer">
+            <p style="text-align: center; color: #999; padding: 40px;">Loading deeds...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Documents Tab -->
+      <div id="tab-documents" class="tab-content">
+        <div class="card">
+          <h3>📄 Documents</h3>
+          
+          <!-- Upload Button for HR/Admin -->
+          <div class="timeline-actions">
+            <button class="btn-action" id="btnUploadDocument" onclick="openDocumentModal()">
+              📤 Upload Document
+            </button>
+          </div>
+          
+          <div id="documentsContainer" class="documents-grid">
+            <!-- Documents will be loaded here -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Related Work Tab -->
+      <div id="tab-related" class="tab-content">
+        <div class="card">
+          <h3>🔗 Related Tenders</h3>
+          <div id="relatedTendersContainer" class="related-list">
+            <!-- Related tenders will be loaded here -->
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top: 24px;">
+          <h3>🏗️ Related Projects</h3>
+          <div id="relatedProjectsContainer" class="related-list">
+            <!-- Related projects will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Authentication check
+    if (localStorage.getItem('isLoggedIn') !== 'true') {
+      window.location.href = '/login';
+    }
+    
+    // Show edit button for HR/Admin
+    const userRole = localStorage.getItem('userRole');
+    if (['admin', 'hr'].includes(userRole)) {
+      const editBtn = document.getElementById('editBtn');
+      editBtn.style.display = 'inline-block';
+    }
+    
+    // Get officer ID from URL
+    const officerId = window.location.pathname.split('/').pop();
+    
+    // Set edit button href
+    document.getElementById('editBtn').href = `/officers/${officerId}/edit`;
+    
+    // Fetch with authentication
+    async function fetchWithAuth(url, options = {}) {
+      const token = localStorage.getItem('accessToken');
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch(url, { ...options, headers });
+      
+      if (response.status === 401) {
+        localStorage.clear();
+        window.location.href = '/login';
+        throw new Error('Session expired');
+      }
+      
+      return response;
+    }
+    
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    
+    // Format currency
+    function formatCurrency(amount) {
+      if (!amount) return '-';
+      return `৳ ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    }
+    
+    // Switch tab
+    function switchTab(tabName) {
+      // Update tab buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+      });
+      event.target.classList.add('active');
+      event.target.setAttribute('aria-selected', 'true');
+      
+      // Update tab content
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+    
+    // Load officer data
+    async function loadOfficer() {
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          renderOfficer(data);
+        } else {
+          document.getElementById('loadingState').innerHTML = 
+            '<p style="color: red;">❌ Officer not found</p>' +
+            '<a href="/officers" class="btn-back" style="display: inline-block; margin-top: 20px;">← Back to List</a>';
+        }
+      } catch (err) {
+        console.error('Failed to load officer:', err);
+        document.getElementById('loadingState').innerHTML = 
+          '<p style="color: red;">❌ Failed to load officer</p>';
+      }
+    }
+    
+    // Field masking functions
+    const maskPhone = (phone) => {
+      if (!phone) return null;
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length < 4) return 'XXX-XXXX';
+      return cleaned.slice(0, -4).replace(/\d/g, 'X') + '-' + cleaned.slice(-4);
+    };
+    
+    const maskEmail = (email) => {
+      if (!email) return null;
+      const [username, domain] = email.split('@');
+      if (!username || !domain) return 'XXX@XXX.com';
+      const visibleChars = Math.min(3, username.length);
+      return username.slice(0, visibleChars) + '***@' + domain;
+    };
+    
+    const maskNID = (nid) => {
+      if (!nid) return null;
+      if (nid.length < 4) return 'XXXX-XXXX-XXXX';
+      return 'XXXX-XXXX-' + nid.slice(-4);
+    };
+    
+    // Track unmasked state
+    let unmaskedFields = new Set();
+    
+    // Toggle field visibility
+    function toggleFieldVisibility(fieldId, originalValue, maskFunction) {
+      const element = document.getElementById(fieldId);
+      const isMasked = !unmaskedFields.has(fieldId);
+      
+      if (isMasked) {
+        // Unmask
+        element.textContent = originalValue || '-';
+        element.style.color = '#2c7a3a';
+        element.style.fontWeight = '600';
+        unmaskedFields.add(fieldId);
+      } else {
+        // Mask
+        element.textContent = maskFunction(originalValue) || '-';
+        element.style.color = '';
+        element.style.fontWeight = '';
+        unmaskedFields.delete(fieldId);
+      }
+    }
+    
+    // Render officer data
+    function renderOfficer(data) {
+      const { officer, timeline, documents } = data;
+      
+      // Store officer globally for modals
+      window.currentOfficer = officer;
+      
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('profileContainer').style.display = 'block';
+      
+      // Show action buttons for HR/Admin
+      const userRole = localStorage.getItem('userRole');
+      if (['admin', 'hr'].includes(userRole)) {
+        document.getElementById('btnRecordTransfer').style.display = 'block';
+        document.getElementById('btnRecordPromotion').style.display = 'block';
+        document.getElementById('btnUploadDocument').style.display = 'block';
+      }
+      
+      // Header
+      const initials = officer.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+      document.getElementById('profilePhoto').textContent = initials;
+      document.getElementById('profileName').textContent = officer.full_name;
+      document.getElementById('profileBangla').textContent = officer.name_bangla || '';
+      
+      const statusBadge = officer.employment_status === 'active' 
+        ? '<span class="badge badge-active">✓ Active</span>'
+        : `<span class="badge">${officer.employment_status}</span>`;
+      document.getElementById('profileStatus').innerHTML = statusBadge;
+      
+      document.getElementById('employeeId').textContent = officer.employee_id || '-';
+      document.getElementById('designation').textContent = officer.designation_title || '-';
+      document.getElementById('office').textContent = 
+        `${officer.office_name || '-'} ${officer.office_code ? `(${officer.office_code})` : ''}`;
+      document.getElementById('joiningDate').textContent = formatDate(officer.joining_date);
+      
+      // Overview - Contact (with masking)
+      const personalMobileEl = document.getElementById('personalMobile');
+      const officialMobileEl = document.getElementById('officialMobile');
+      const personalEmailEl = document.getElementById('personalEmail');
+      const officialEmailEl = document.getElementById('officialEmail');
+      
+      personalMobileEl.textContent = maskPhone(officer.personal_mobile) || '-';
+      personalMobileEl.dataset.original = officer.personal_mobile || '';
+      
+      officialMobileEl.textContent = maskPhone(officer.official_mobile) || '-';
+      officialMobileEl.dataset.original = officer.official_mobile || '';
+      
+      personalEmailEl.textContent = maskEmail(officer.personal_email) || '-';
+      personalEmailEl.dataset.original = officer.personal_email || '';
+      
+      officialEmailEl.textContent = maskEmail(officer.official_email) || '-';
+      officialEmailEl.dataset.original = officer.official_email || '';
+      
+      document.getElementById('emergencyContact').textContent = officer.emergency_contact || '-';
+      document.getElementById('emergencyContactName').textContent = officer.emergency_contact_name || '-';
+      
+      // Overview - Personal
+      document.getElementById('fatherName').textContent = officer.father_name || '-';
+      document.getElementById('dateOfBirth').textContent = formatDate(officer.date_of_birth);
+      document.getElementById('gender').textContent = officer.gender ? officer.gender.charAt(0).toUpperCase() + officer.gender.slice(1) : '-';
+      document.getElementById('bloodGroup').textContent = officer.blood_group || '-';
+      
+      const nidEl = document.getElementById('nidNumber');
+      nidEl.textContent = maskNID(officer.nid_number) || '-';
+      nidEl.dataset.original = officer.nid_number || '';
+      
+      document.getElementById('religion').textContent = officer.religion || '-';
+      
+      // Overview - Address
+      document.getElementById('presentAddress').textContent = officer.present_address || '-';
+      document.getElementById('permanentAddress').textContent = officer.permanent_address || '-';
+      document.getElementById('district').textContent = officer.district || '-';
+      document.getElementById('division').textContent = officer.division || '-';
+      
+      // Overview - Employment
+      document.getElementById('position').textContent = officer.position_title || '-';
+      document.getElementById('department').textContent = officer.department || '-';
+      document.getElementById('currentGrade').textContent = officer.current_grade || '-';
+      
+      const salaryEl = document.getElementById('basicSalary');
+      const salaryValue = officer.basic_salary;
+      salaryEl.textContent = '৳ XXX,XXX';
+      salaryEl.dataset.original = formatCurrency(salaryValue);
+      
+      document.getElementById('employmentType').textContent = officer.employment_type || '-';
+      document.getElementById('confirmationDate').textContent = formatDate(officer.confirmation_date);
+      
+      // Overview - Education
+      document.getElementById('education').textContent = officer.education_qualification || '-';
+      document.getElementById('training').textContent = officer.training_courses || '-';
+      document.getElementById('skills').textContent = officer.skills || '-';
+      document.getElementById('languages').textContent = officer.languages_known || '-';
+      
+      // Timeline
+      renderTimeline(timeline);
+      
+      // Documents
+      renderDocuments(documents);
+      
+      // Related work
+      renderRelatedTenders(data.relatedTenders || []);
+      renderRelatedProjects(data.relatedProjects || []);
+    }
+    
+    // Render timeline
+    function renderTimeline(timeline) {
+      const container = document.getElementById('timelineContainer');
+      
+      if (timeline.length === 0) {
+        container.innerHTML = '<div class="empty-message">No timeline records found</div>';
+        return;
+      }
+      
+      container.innerHTML = timeline.map(item => {
+        const isPromotion = item.type === 'promotion';
+        const dotClass = isPromotion ? 'promotion' : '';
+        const contentClass = isPromotion ? 'promotion' : '';
+        
+        let title, description;
+        
+        if (isPromotion) {
+          title = `Promoted: ${item.from_designation_title} → ${item.to_designation_title}`;
+          description = `
+            <div><strong>Grade:</strong> ${item.from_grade || 'N/A'} → ${item.to_grade || 'N/A'}</div>
+            <div><strong>Salary:</strong> ${formatCurrency(item.from_basic_salary)} → ${formatCurrency(item.to_basic_salary)}</div>
+            ${item.promotion_order_number ? `<div><strong>Order No:</strong> ${item.promotion_order_number}</div>` : ''}
+            ${item.reason ? `<div><strong>Reason:</strong> ${item.reason}</div>` : ''}
+          `;
+        } else {
+          title = `Transferred: ${item.from_office_name || 'N/A'} → ${item.to_office_name}`;
+          description = `
+            ${item.to_designation_title !== item.from_designation_title ? 
+              `<div><strong>Designation:</strong> ${item.from_designation_title || 'N/A'} → ${item.to_designation_title || 'N/A'}</div>` : ''}
+            ${item.transfer_order_number ? `<div><strong>Order No:</strong> ${item.transfer_order_number}</div>` : ''}
+            ${item.reason ? `<div><strong>Reason:</strong> ${item.reason}</div>` : ''}
+          `;
+        }
+        
+        return `
+          <div class="timeline-item">
+            <div class="timeline-dot ${dotClass}"></div>
+            <div class="timeline-content ${contentClass}">
+              <div class="timeline-date">${formatDate(item.date)}</div>
+              <div class="timeline-title">${title}</div>
+              <div class="timeline-desc">${description}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Render documents
+    function renderDocuments(documents) {
+      const container = document.getElementById('documentsContainer');
+      const userRole = localStorage.getItem('userRole');
+      const canDelete = ['admin', 'hr'].includes(userRole);
+      
+      if (documents.length === 0) {
+        container.innerHTML = '<div class="empty-message">No documents uploaded</div>';
+        return;
+      }
+      
+      container.innerHTML = documents.map(doc => {
+        const icon = doc.file_type && doc.file_type.includes('pdf') ? '📄' : '📎';
+        const fileSize = formatFileSize(doc.file_size);
+        const uploadDate = formatDate(doc.uploaded_at);
+        const deleteBtn = canDelete ? 
+          `<button class="doc-delete-btn" onclick="event.stopPropagation(); deleteDocument('${doc.id}', '${doc.document_title}')" title="Delete Document">🗑️</button>` : '';
+        
+        return `
+          <div class="document-card" onclick="window.open('/uploads/${doc.file_path}', '_blank')">
+            ${deleteBtn}
+            <div class="document-icon">${icon}</div>
+            <div class="document-title">${doc.document_title}</div>
+            <div class="document-type">${doc.document_type}</div>
+            <div class="document-meta">
+              <span>📦 ${fileSize}</span>
+              <span>📅 ${uploadDate}</span>
+            </div>
+            ${doc.issue_date ? `<div class="document-dates">Issue: ${formatDate(doc.issue_date)}${doc.expiry_date ? ` | Expiry: ${formatDate(doc.expiry_date)}` : ''}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+      if (!bytes) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+    
+    // Delete document
+    async function deleteDocument(docId, docTitle) {
+      if (!confirm(`Are you sure you want to delete "${docTitle}"?`)) {
+        return;
+      }
+      
+      try {
+        const result = await fetchWithAuth(`/api/officers/documents/${docId}`, {
+          method: 'DELETE'
+        });
+        
+        alert('Document deleted successfully!');
+        renderDocuments(result.documents);
+      } catch (err) {
+        alert('Error: ' + (err.message || 'Failed to delete document'));
+      }
+    }
+    
+    // Render related tenders
+    function renderRelatedTenders(tenders) {
+      const container = document.getElementById('relatedTendersContainer');
+      
+      if (tenders.length === 0) {
+        container.innerHTML = '<div class="empty-message">No related tenders found</div>';
+        return;
+      }
+      
+      container.innerHTML = tenders.map(tender => `
+        <div class="related-item" onclick="window.location.href='/tenders/${tender.id}'">
+          <div class="related-item-header">
+            <div class="related-item-title">${tender.tender_id || 'N/A'} - ${tender.procuring_entity || 'Unknown'}</div>
+            <span class="related-item-status status-${tender.status}">${tender.status}</span>
+          </div>
+          <div class="related-item-desc">${tender.briefDesc || 'No description'}</div>
+          <div class="related-item-meta">
+            ${tender.tender_value ? `<span>💰 ${formatCurrency(tender.tender_value)}</span>` : ''}
+            ${tender.lastSubmission ? `<span>📅 Submission: ${formatDate(tender.lastSubmission)}</span>` : ''}
+            ${tender.opening ? `<span>📂 Opening: ${formatDate(tender.opening)}</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Render related projects
+    function renderRelatedProjects(projects) {
+      const container = document.getElementById('relatedProjectsContainer');
+      
+      if (projects.length === 0) {
+        container.innerHTML = '<div class="empty-message">No related projects found</div>';
+        return;
+      }
+      
+      container.innerHTML = projects.map(project => `
+        <div class="related-item" onclick="window.location.href='/projects/${project.id}'">
+          <div class="related-item-header">
+            <div class="related-item-title">${project.contract_number || 'N/A'} - ${project.project_name}</div>
+            <span class="related-item-status status-${project.status}">${project.status}</span>
+          </div>
+          <div class="related-item-meta">
+            ${project.contract_value ? `<span>💰 Value: ${formatCurrency(project.contract_value)}</span>` : ''}
+            ${project.commencement_date ? `<span>🚀 Start: ${formatDate(project.commencement_date)}</span>` : ''}
+            ${project.completion_date ? `<span>🏁 End: ${formatDate(project.completion_date)}</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Load and render deeds
+    let currentDeedFilter = 'all';
+    
+    async function loadDeeds() {
+      try {
+        let url = `/api/officers/${officerId}/deeds`;
+        if (currentDeedFilter !== 'all') {
+          if (currentDeedFilter === 'pending') {
+            url += '?verification_status=pending';
+          } else {
+            url += `?deed_type=${currentDeedFilter}`;
+          }
+        }
+        
+        const response = await fetchWithAuth(url);
+        const data = await response.json();
+        
+        if (response.ok) {
+          renderDeeds(data.deeds);
+          updateDeedStats(data.deeds);
+        }
+      } catch (err) {
+        console.error('Failed to load deeds:', err);
+        document.getElementById('deedsContainer').innerHTML = 
+          '<p style="text-align: center; color: red;">Failed to load deeds</p>';
+      }
+    }
+    
+    function renderDeeds(deeds) {
+      const container = document.getElementById('deedsContainer');
+      
+      if (deeds.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">No deeds recorded yet</p>';
+        return;
+      }
+      
+      container.innerHTML = deeds.map(deed => `
+        <div class="deed-card ${deed.deed_type}">
+          <div class="deed-header">
+            <div style="flex: 1;">
+              <div class="deed-title">
+                ${deed.deed_type === 'good' ? '✅' : '❌'} ${deed.title}
+              </div>
+              <div class="deed-meta">
+                <span>📅 ${formatDate(deed.deed_date)}</span>
+                ${deed.category ? `<span>🏷️ ${deed.category}</span>` : ''}
+                ${deed.severity ? `<span>⚡ ${deed.severity}</span>` : ''}
+                ${deed.points ? `<span><strong>${deed.points > 0 ? '+' : ''}${deed.points} pts</strong></span>` : ''}
+              </div>
+            </div>
+            <span class="deed-badge ${deed.verification_status}">
+              ${deed.verification_status}
+            </span>
+          </div>
+          
+          ${deed.description ? `<p style="color: #666; font-size: 14px; margin-bottom: 8px;">${deed.description}</p>` : ''}
+          
+          ${deed.remarks ? `<p style="color: #999; font-size: 13px; font-style: italic;">💬 ${deed.remarks}</p>` : ''}
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+            <span style="font-size: 12px; color: #999;">
+              Reported by ${deed.reported_by || 'N/A'} 
+              ${deed.verified_by ? `• Verified by ${deed.verified_by}` : ''}
+            </span>
+            ${['admin', 'hr'].includes(localStorage.getItem('userRole')) ? `
+              <div style="display: flex; gap: 8px;">
+                ${deed.verification_status === 'pending' ? `
+                  <button onclick="verifyDeed('${deed.id}', 'verified')" class="btn-action" style="background: #27ae60; color: white; padding: 4px 12px; font-size: 12px;">
+                    ✓ Verify
+                  </button>
+                  <button onclick="verifyDeed('${deed.id}', 'rejected')" class="btn-action" style="background: #e74c3c; color: white; padding: 4px 12px; font-size: 12px;">
+                    ✗ Reject
+                  </button>
+                ` : ''}
+                ${localStorage.getItem('userRole') === 'admin' ? `
+                  <button onclick="deleteDeed('${deed.id}')" class="btn-action" style="background: #95a5a6; color: white; padding: 4px 12px; font-size: 12px;">
+                    🗑️
+                  </button>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function updateDeedStats(deeds) {
+      const verified = deeds.filter(d => d.verification_status === 'verified');
+      const goodCount = verified.filter(d => d.deed_type === 'good').length;
+      const badCount = verified.filter(d => d.deed_type === 'bad').length;
+      const totalPoints = verified.reduce((sum, d) => sum + (d.points || 0), 0);
+      
+      document.getElementById('goodDeedsCount').textContent = goodCount;
+      document.getElementById('badDeedsCount').textContent = badCount;
+      document.getElementById('totalPoints').textContent = totalPoints;
+      
+      // Calculate rating
+      let rating = 'Average';
+      if (totalPoints >= 100) rating = 'Exceptional';
+      else if (totalPoints >= 50) rating = 'Excellent';
+      else if (totalPoints >= 20) rating = 'Good';
+      else if (totalPoints >= 0) rating = 'Average';
+      else if (totalPoints >= -20) rating = 'Below Average';
+      else rating = 'Poor';
+      
+      document.getElementById('performanceRating').textContent = rating;
+    }
+    
+    function filterDeeds(filter) {
+      currentDeedFilter = filter;
+      
+      // Update active filter button
+      document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      document.getElementById(`filter-${filter}`).classList.add('active');
+      
+      loadDeeds();
+    }
+    
+    async function verifyDeed(deedId, status) {
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}/deeds/${deedId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ verification_status: status })
+        });
+        
+        if (response.ok) {
+          alert(`✅ Deed ${status}!`);
+          loadDeeds();
+          loadOfficer(); // Reload to update stats
+        } else {
+          alert('Failed to update deed');
+        }
+      } catch (err) {
+        console.error('Verify deed error:', err);
+        alert('Failed to update deed');
+      }
+    }
+    
+    async function deleteDeed(deedId) {
+      if (!confirm('Are you sure you want to delete this deed record?')) return;
+      
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}/deeds/${deedId}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('✅ Deed deleted');
+          loadDeeds();
+          loadOfficer();
+        } else {
+          alert('Failed to delete deed');
+        }
+      } catch (err) {
+        console.error('Delete deed error:', err);
+        alert('Failed to delete deed');
+      }
+    }
+    
+    function showAddDeedModal() {
+      const modal = document.getElementById('deedModal');
+      modal.style.display = 'flex';
+      
+      // Set default date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('deed_date').value = today;
+      
+      // Reset form
+      document.getElementById('deedForm').reset();
+      document.getElementById('deed_date').value = today;
+    }
+    
+    function closeDeedModal() {
+      document.getElementById('deedModal').style.display = 'none';
+      document.getElementById('deedForm').reset();
+    }
+    
+    // Load deed categories based on type
+    let allDeedCategories = [];
+    
+    async function loadAllDeedCategories() {
+      try {
+        const response = await fetchWithAuth('/api/deed-categories');
+        const data = await response.json();
+        allDeedCategories = data.categories;
+      } catch (err) {
+        console.error('Failed to load deed categories:', err);
+      }
+    }
+    
+    function loadDeedCategories() {
+      const type = document.getElementById('deed_type').value;
+      const select = document.getElementById('deed_category');
+      
+      if (!type) {
+        select.innerHTML = '<option value="">Select Category</option>';
+        return;
+      }
+      
+      const filtered = allDeedCategories.filter(cat => cat.type === type);
+      select.innerHTML = '<option value="">Select Category</option>' +
+        filtered.map(cat => `<option value="${cat.name}" data-points="${cat.points}">
+          ${cat.name} (${cat.points > 0 ? '+' : ''}${cat.points} pts)
+        </option>`).join('');
+    }
+    
+    function updateDeedPoints() {
+      const select = document.getElementById('deed_category');
+      const selectedOption = select.options[select.selectedIndex];
+      const points = selectedOption ? selectedOption.getAttribute('data-points') : '0';
+      document.getElementById('deed_points').value = points || '0';
+    }
+    
+    async function submitDeed(event) {
+      event.preventDefault();
+      
+      const formData = {
+        deed_type: document.getElementById('deed_type').value,
+        category: document.getElementById('deed_category').value,
+        title: document.getElementById('deed_title').value,
+        deed_date: document.getElementById('deed_date').value,
+        severity: document.getElementById('deed_severity').value || null,
+        points: parseInt(document.getElementById('deed_points').value) || 0,
+        description: document.getElementById('deed_description').value || null,
+        remarks: document.getElementById('deed_remarks').value || null,
+        is_confidential: document.getElementById('deed_confidential').checked ? 1 : 0
+      };
+      
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}/deeds`, {
+          method: 'POST',
+          body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+          alert('✅ Deed recorded successfully!');
+          closeDeedModal();
+          loadDeeds();
+          loadOfficer(); // Reload to update stats in officer info
+        } else {
+          const error = await response.json();
+          alert('Failed to record deed: ' + (error.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Submit deed error:', err);
+        alert('Failed to record deed');
+      }
+    }
+    
+    // Show Add Deed button for HR/Admin
+    const userRole = localStorage.getItem('userRole');
+    if (['admin', 'hr', 'manager'].includes(userRole)) {
+      const btnAddDeed = document.getElementById('btnAddDeed');
+      if (btnAddDeed) btnAddDeed.style.display = 'inline-block';
+    }
+    
+    // Initialize
+    loadOfficer();
+    loadDeeds();
+    loadAllDeedCategories();
+  </script>
+
+  <!-- Document Upload Modal -->
+  <div id="documentModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2>Upload Document</h2>
+        <button class="modal-close" onclick="closeDocumentModal()">×</button>
+      </div>
+      <form id="documentForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>Document Title *</label>
+          <input type="text" id="document_title" required placeholder="e.g., National ID Card">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Document Type *</label>
+            <select id="document_type" required>
+              <option value="">Select Type</option>
+              <option value="National ID">National ID</option>
+              <option value="Birth Certificate">Birth Certificate</option>
+              <option value="Educational Certificate">Educational Certificate</option>
+              <option value="Passport">Passport</option>
+              <option value="Driving License">Driving License</option>
+              <option value="Appointment Letter">Appointment Letter</option>
+              <option value="Promotion Order">Promotion Order</option>
+              <option value="Transfer Order">Transfer Order</option>
+              <option value="Service Record">Service Record</option>
+              <option value="Medical Certificate">Medical Certificate</option>
+              <option value="Training Certificate">Training Certificate</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Issued By</label>
+            <input type="text" id="issued_by" placeholder="e.g., Government of Bangladesh">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Issue Date</label>
+            <input type="date" id="issue_date">
+          </div>
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <input type="date" id="expiry_date">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Document File * (Max 10MB - PDF, JPG, PNG, DOC, DOCX)</label>
+          <input type="file" id="document_file" required accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+          <div id="filePreview" style="margin-top: 8px; color: #666; font-size: 13px;"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Remarks</label>
+          <textarea id="doc_remarks" rows="3" placeholder="Additional notes about this document"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeDocumentModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Upload Document</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Deed Modal -->
+  <div id="deedModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Record Deed</h2>
+        <button class="modal-close" onclick="closeDeedModal()">×</button>
+      </div>
+      <form id="deedForm" onsubmit="submitDeed(event)">
+        <div class="form-group">
+          <label for="deed_type">Type <span style="color: red;">*</span></label>
+          <select id="deed_type" name="deed_type" required onchange="loadDeedCategories()">
+            <option value="">Select Type</option>
+            <option value="good">✅ Good Deed</option>
+            <option value="bad">❌ Incident / Violation</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_category">Category <span style="color: red;">*</span></label>
+          <select id="deed_category" name="category" required onchange="updateDeedPoints()">
+            <option value="">Select Category</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_title">Title <span style="color: red;">*</span></label>
+          <input type="text" id="deed_title" name="title" required placeholder="Brief description">
+        </div>
+
+        <div class="form-group">
+          <label for="deed_date">Date <span style="color: red;">*</span></label>
+          <input type="date" id="deed_date" name="deed_date" required>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_severity">Severity</label>
+          <select id="deed_severity" name="severity">
+            <option value="">Select Severity</option>
+            <option value="minor">Minor</option>
+            <option value="moderate">Moderate</option>
+            <option value="major">Major</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_points">Points</label>
+          <input type="number" id="deed_points" name="points" value="0" readonly style="background: #f8f9fa;">
+          <small style="color: #999; display: block; margin-top: 4px;">Automatically set by category</small>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_description">Description</label>
+          <textarea id="deed_description" name="description" rows="3" placeholder="Detailed information..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_remarks">Remarks</label>
+          <textarea id="deed_remarks" name="remarks" rows="2" placeholder="Additional notes..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="deed_confidential" name="is_confidential" value="1">
+            <span>🔒 Mark as Confidential</span>
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeDeedModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Deed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Transfer Modal -->
+  <div id="transferModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2>Record Transfer</h2>
+        <button class="modal-close" onclick="closeTransferModal()">×</button>
+      </div>
+      <form id="transferForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Transfer Date *</label>
+            <input type="date" id="transfer_date" required>
+          </div>
+          <div class="form-group">
+            <label>Effective Date *</label>
+            <input type="date" id="transfer_effective_date" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>From Office</label>
+            <input type="text" id="from_office_name" readonly style="background-color: #f5f5f5;">
+            <input type="hidden" id="from_office_id">
+          </div>
+          <div class="form-group">
+            <label>To Office *</label>
+            <select id="to_office_id" required>
+              <option value="">Select Office</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>From Designation</label>
+            <input type="text" id="from_designation_name" readonly style="background-color: #f5f5f5;">
+            <input type="hidden" id="from_designation_id">
+          </div>
+          <div class="form-group">
+            <label>To Designation (Optional)</label>
+            <select id="to_designation_id">
+              <option value="">Keep Same Designation</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Order Number</label>
+            <input type="text" id="transfer_order_number">
+          </div>
+          <div class="form-group">
+            <label>Order Date</label>
+            <input type="date" id="transfer_order_date">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Remarks</label>
+          <textarea id="transfer_remarks" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closeTransferModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Record Transfer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Promotion Modal -->
+  <div id="promotionModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2>Record Promotion</h2>
+        <button class="modal-close" onclick="closePromotionModal()">×</button>
+      </div>
+      <form id="promotionForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Promotion Date *</label>
+            <input type="date" id="promotion_date" required>
+          </div>
+          <div class="form-group">
+            <label>Effective Date *</label>
+            <input type="date" id="promotion_effective_date" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>From Designation</label>
+            <input type="text" id="promo_from_designation_name" readonly style="background-color: #f5f5f5;">
+            <input type="hidden" id="promo_from_designation_id">
+          </div>
+          <div class="form-group">
+            <label>To Designation (Higher Grade) *</label>
+            <select id="promo_to_designation_id" required>
+              <option value="">Select Designation</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>From Grade</label>
+            <input type="text" id="from_grade" readonly style="background-color: #f5f5f5;">
+          </div>
+          <div class="form-group">
+            <label>To Grade</label>
+            <input type="number" id="to_grade">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>New Salary</label>
+            <input type="number" id="new_salary" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Order Number</label>
+            <input type="text" id="promotion_order_number">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Order Date</label>
+          <input type="date" id="promotion_order_date">
+        </div>
+
+        <div class="form-group">
+          <label>Remarks</label>
+          <textarea id="promotion_remarks" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="closePromotionModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Record Promotion</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Modal functions
+    function openDocumentModal() {
+      const modal = document.getElementById('documentModal');
+      modal.style.display = 'block';
+    }
+
+    function closeDocumentModal() {
+      document.getElementById('documentModal').style.display = 'none';
+      document.getElementById('documentForm').reset();
+      document.getElementById('filePreview').textContent = '';
+    }
+
+    function openTransferModal() {
+      const modal = document.getElementById('transferModal');
+      modal.style.display = 'block';
+      
+      // Load offices and designations
+      loadOfficesForTransfer();
+      loadDesignationsForTransfer();
+      
+      // Pre-fill from office and designation
+      document.getElementById('from_office_name').value = window.currentOfficer.office_name || 'Not Set';
+      document.getElementById('from_office_id').value = window.currentOfficer.office_id || '';
+      document.getElementById('from_designation_name').value = window.currentOfficer.designation_title || 'Not Set';
+      document.getElementById('from_designation_id').value = window.currentOfficer.designation_id || '';
+      
+      // Set default dates
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('transfer_date').value = today;
+      document.getElementById('transfer_effective_date').value = today;
+    }
+
+    function closeTransferModal() {
+      document.getElementById('transferModal').style.display = 'none';
+      document.getElementById('transferForm').reset();
+    }
+
+    function openPromotionModal() {
+      const modal = document.getElementById('promotionModal');
+      modal.style.display = 'block';
+      
+      // Load higher designations only
+      loadDesignationsForPromotion();
+      
+      // Pre-fill from designation and grade
+      document.getElementById('promo_from_designation_name').value = window.currentOfficer.designation_title || 'Not Set';
+      document.getElementById('promo_from_designation_id').value = window.currentOfficer.designation_id || '';
+      document.getElementById('from_grade').value = window.currentOfficer.current_grade || 'Not Set';
+      
+      // Set default dates
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('promotion_date').value = today;
+      document.getElementById('promotion_effective_date').value = today;
+    }
+
+    function closePromotionModal() {
+      document.getElementById('promotionModal').style.display = 'none';
+      document.getElementById('promotionForm').reset();
+    }
+
+    // Load offices for transfer dropdown
+    async function loadOfficesForTransfer() {
+      try {
+        const offices = await fetchWithAuth('/api/offices');
+        const select = document.getElementById('to_office_id');
+        select.innerHTML = '<option value="">Select Office</option>' +
+          offices.map(o => `<option value="${o.id}">${o.office_name} (${o.office_code})</option>`).join('');
+      } catch (err) {
+        console.error('Load offices error:', err);
+      }
+    }
+
+    // Load designations for transfer dropdown
+    async function loadDesignationsForTransfer() {
+      try {
+        const designations = await fetchWithAuth('/api/designations');
+        const select = document.getElementById('to_designation_id');
+        select.innerHTML = '<option value="">Keep Same Designation</option>' +
+          designations.map(d => `<option value="${d.id}">${d.title}</option>`).join('');
+      } catch (err) {
+        console.error('Load designations error:', err);
+      }
+    }
+
+    // Load higher-grade designations for promotion dropdown
+    async function loadDesignationsForPromotion() {
+      try {
+        const designations = await fetchWithAuth('/api/designations');
+        const currentGrade = window.currentOfficer.current_grade || 0;
+        
+        // Filter to show only higher grades (lower grade_level numbers)
+        const higherDesignations = designations.filter(d => d.grade_level < (window.currentOfficer.grade_level || 999));
+        
+        const select = document.getElementById('promo_to_designation_id');
+        select.innerHTML = '<option value="">Select Designation</option>' +
+          higherDesignations.map(d => `<option value="${d.id}">${d.title} (Grade Level: ${d.grade_level})</option>`).join('');
+      } catch (err) {
+        console.error('Load designations error:', err);
+      }
+    }
+
+    // Handle transfer form submission
+    document.getElementById('transferForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const officerId = window.currentOfficer.id;
+      const data = {
+        transfer_date: document.getElementById('transfer_date').value,
+        from_office_id: document.getElementById('from_office_id').value,
+        to_office_id: document.getElementById('to_office_id').value,
+        from_designation_id: document.getElementById('from_designation_id').value,
+        to_designation_id: document.getElementById('to_designation_id').value || null,
+        order_number: document.getElementById('transfer_order_number').value,
+        order_date: document.getElementById('transfer_order_date').value,
+        effective_date: document.getElementById('transfer_effective_date').value,
+        remarks: document.getElementById('transfer_remarks').value
+      };
+      
+      try {
+        const result = await fetchWithAuth(`/api/officers/${officerId}/transfers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        alert('Transfer recorded successfully!');
+        closeTransferModal();
+        loadOfficer(); // Reload officer data
+      } catch (err) {
+        alert('Error: ' + (err.message || 'Failed to record transfer'));
+      }
+    });
+
+    // Handle promotion form submission
+    document.getElementById('promotionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const officerId = window.currentOfficer.id;
+      const data = {
+        promotion_date: document.getElementById('promotion_date').value,
+        from_designation_id: document.getElementById('promo_from_designation_id').value,
+        to_designation_id: document.getElementById('promo_to_designation_id').value,
+        from_grade: document.getElementById('from_grade').value,
+        to_grade: document.getElementById('to_grade').value || null,
+        new_salary: document.getElementById('new_salary').value || null,
+        order_number: document.getElementById('promotion_order_number').value,
+        order_date: document.getElementById('promotion_order_date').value,
+        effective_date: document.getElementById('promotion_effective_date').value,
+        remarks: document.getElementById('promotion_remarks').value
+      };
+      
+      try {
+        const result = await fetchWithAuth(`/api/officers/${officerId}/promotions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        alert('Promotion recorded successfully!');
+        closePromotionModal();
+        loadOfficer(); // Reload officer data
+      } catch (err) {
+        alert('Error: ' + (err.message || 'Failed to record promotion'));
+      }
+    });
+
+    // Handle document form submission
+    document.getElementById('documentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const officerId = window.currentOfficer.id;
+      const formData = new FormData();
+      
+      formData.append('document_title', document.getElementById('document_title').value);
+      formData.append('document_type', document.getElementById('document_type').value);
+      formData.append('issued_by', document.getElementById('issued_by').value);
+      formData.append('issue_date', document.getElementById('issue_date').value);
+      formData.append('expiry_date', document.getElementById('expiry_date').value);
+      formData.append('remarks', document.getElementById('doc_remarks').value);
+      formData.append('document', document.getElementById('document_file').files[0]);
+      
+      try {
+        const response = await fetchWithAuth(`/api/officers/${officerId}/documents`, {
+          method: 'POST',
+          body: formData
+          // Don't set Content-Type header - browser will set it with boundary for FormData
+        });
+        
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        
+        alert('Document uploaded successfully!');
+        closeDocumentModal();
+        renderDocuments(result.documents);
+      } catch (err) {
+        alert('Error: ' + (err.message || 'Failed to upload document'));
+      }
+    });
+
+    // File preview
+    document.getElementById('document_file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const preview = document.getElementById('filePreview');
+      
+      if (file) {
+        const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+        preview.textContent = `📎 ${file.name} (${sizeMB} MB)`;
+        
+        if (file.size > 10 * 1024 * 1024) {
+          preview.style.color = 'red';
+          preview.textContent += ' - File too large! Maximum 10MB';
+        } else {
+          preview.style.color = '#2c7a3a';
+        }
+      } else {
+        preview.textContent = '';
+      }
+    });
+
+    // Close modals on outside click
+    window.onclick = function(event) {
+      const transferModal = document.getElementById('transferModal');
+      const promotionModal = document.getElementById('promotionModal');
+      const documentModal = document.getElementById('documentModal');
+      const deedModal = document.getElementById('deedModal');
+      if (event.target === transferModal) {
+        closeTransferModal();
+      }
+      if (event.target === promotionModal) {
+        closePromotionModal();
+      }
+      if (event.target === documentModal) {
+        closeDocumentModal();
+      }
+      if (event.target === deedModal) {
+        closeDeedModal();
+      }
+    }
+  </script>
+</body>
+</html>

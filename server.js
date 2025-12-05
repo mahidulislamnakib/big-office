@@ -2,7 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
-const Database = require('better-sqlite3');
+const compression = require('compression');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
@@ -16,14 +16,16 @@ const { hashPassword, comparePassword, validatePasswordStrength } = require('./u
 const { generateTokenPair, verifyRefreshToken } = require('./utils/jwt');
 const logger = require('./utils/logger');
 const ReportGenerator = require('./utils/reportGenerator');
+const { validate, schemas } = require('./middleware/validator');
+const { auditLog, auditAuth } = require('./middleware/audit');
+const { db, row, rows, run, transaction, paginate } = require('./utils/database');
+const { 
+  applyFieldSecurity, 
+  applyFieldSecurityToList, 
+  applyOfficerSecurity,
+  logFieldAccess 
+} = require('./middleware/fieldSecurity');
 
-const DB_FILE = path.join(__dirname, 'data', 'tenders.db');
-if (!fs.existsSync(DB_FILE)) {
-  console.error('Database not found. Run `npm run init-db` first.');
-  process.exit(1);
-}
-
-const db = new Database(DB_FILE, { readonly: false });
 const app = express();
 
 // Security middleware
@@ -31,6 +33,9 @@ app.use(helmet({
   contentSecurityPolicy: false, // Allow inline scripts for now
   crossOriginEmbedderPolicy: false
 }));
+
+// Compression middleware
+app.use(compression());
 
 // CORS configuration
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
@@ -100,11 +105,17 @@ app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// Helper functions
-const row = (sql, params = []) => db.prepare(sql).get(params);
-const rows = (sql, params = []) => db.prepare(sql).all(params);
-const all = (sql, params = []) => db.prepare(sql).all(params); // Alias for rows
-const run = (sql, params = []) => db.prepare(sql).run(params);
+// Officers Directory routes (frontend only - Phase 2)
+app.get('/officers', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'officers.html'));
+});
+
+app.get('/officers/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'officer-profile.html'));
+});
+
+// Helper function alias for backward compatibility
+const all = rows;
 
 // ============================================
 // MULTER CONFIGURATION FOR FILE UPLOADS
@@ -183,6 +194,67 @@ const uploadLetterhead = multer({
   }
 });
 
+// Storage for officer photos
+const officerPhotoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = path.join(__dirname, 'uploads', 'officers');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `officer-${uniqueSuffix}${ext}`);
+  }
+});
+
+const uploadOfficerPhoto = multer({
+  storage: officerPhotoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG and PNG images allowed for officer photos.'));
+    }
+  }
+});
+
+// Storage for officer documents
+const officerDocStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const officerId = req.params.id || 'temp';
+    const dir = path.join(__dirname, 'uploads', 'officer_documents', officerId);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    cb(null, uniqueSuffix + '-' + sanitizedName);
+  }
+});
+
+const uploadOfficerDoc = multer({
+  storage: officerDocStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /pdf|jpg|jpeg|png|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, images, and office documents allowed.'));
+    }
+  }
+});
+
 // Initialize alert generator
 const alertGenerator = new AlertGenerator();
 
@@ -242,7 +314,7 @@ app.get('/api/firms/:id', authenticate, checkFirmAccess, (req, res) => {
 });
 
 // Create or update firm
-app.post('/api/firms', authenticate, authorize('admin', 'manager'), (req, res) => {
+app.post('/api/firms', authenticate, authorize('admin', 'manager'), validate(schemas.firm), auditLog(req => req.body.id ? 'update' : 'create', 'firm'), (req, res) => {
   try {
     const d = req.body;
     
@@ -275,7 +347,7 @@ app.post('/api/firms', authenticate, authorize('admin', 'manager'), (req, res) =
 });
 
 // Delete firm
-app.delete('/api/firms/:id', authenticate, authorize('admin'), (req, res) => {
+app.delete('/api/firms/:id', authenticate, authorize('admin'), auditLog('delete', 'firm'), (req, res) => {
   try {
     run('DELETE FROM firms WHERE id = ?', [req.params.id]);
     res.json({ ok: true });
@@ -735,8 +807,20 @@ app.get('/api/tenders', authenticate, (req, res) => {
     const status = req.query.status;
     const firmId = req.query.firm_id;
     
-    let sql = `SELECT t.*, f.name as assigned_firm_name FROM tenders t 
-               LEFT JOIN firms f ON t.assigned_firm_id = f.id WHERE 1=1`;
+    let sql = `SELECT t.*, 
+               f.name as assigned_firm_name,
+               o.full_name as officer_name,
+               o.designation_title,
+               o.personal_mobile as officer_mobile,
+               o.personal_email as officer_email
+               FROM tenders t 
+               LEFT JOIN firms f ON t.assigned_firm_id = f.id
+               LEFT JOIN (
+                 SELECT o.id, o.full_name, o.personal_mobile, o.personal_email, d.title as designation_title
+                 FROM officers o
+                 LEFT JOIN designations d ON o.designation_id = d.id
+               ) o ON t.officer_id = o.id
+               WHERE 1=1`;
     const params = [];
     
     if (status) {
@@ -759,7 +843,21 @@ app.get('/api/tenders', authenticate, (req, res) => {
 
 app.get('/api/tenders/:id', authenticate, (req, res) => {
   try {
-    const tender = row('SELECT * FROM tenders WHERE id = ?', [req.params.id]);
+    const tender = row(`SELECT t.*, 
+                        o.full_name as officer_name, o.employee_id as officer_employee_id,
+                        o.designation_title, o.office_name, 
+                        o.personal_mobile as officer_mobile, o.official_mobile as officer_official_mobile,
+                        o.personal_email as officer_email, o.official_email as officer_official_email
+                        FROM tenders t
+                        LEFT JOIN (
+                          SELECT o.id, o.full_name, o.employee_id, o.personal_mobile, o.official_mobile,
+                                 o.personal_email, o.official_email,
+                                 d.title as designation_title, of.office_name
+                          FROM officers o
+                          LEFT JOIN designations d ON o.designation_id = d.id
+                          LEFT JOIN offices of ON o.office_id = of.id
+                        ) o ON t.officer_id = o.id
+                        WHERE t.id = ?`, [req.params.id]);
     if (!tender) return res.status(404).json({ error: 'Not found' });
     
     const assignments = rows(`SELECT ta.*, f.name as firm_name FROM tender_assignments ta 
@@ -779,14 +877,14 @@ app.post('/api/tenders', authenticate, authorize('admin', 'manager'), (req, res)
     const d = req.body;
     
     if (d.id) {
-      run(`UPDATE tenders SET tender_id=?, procuring_entity=?, official=?, proc_type=?, method=?, 
+      run(`UPDATE tenders SET tender_id=?, procuring_entity=?, official=?, officer_id=?, proc_type=?, method=?, 
            briefDesc=?, itemNo=?, itemDesc=?, techSpec=?, quantity=?, pod=?, delivery=?, invRef=?, 
            docPrice=?, lastPurchase=?, lastSubmission=?, opening=?, tSec=?, validity=?, liquid=?, 
            tenderPrep=?, reqDocs=?, inspection=?, contact=?, tender_value=?, eligibility=?, 
            publication_date=?, site_visit_date=?, pre_bid_meeting=?, status=?, source=?, sector=?, 
            assigned_firm_id=?, is_consortium=?, document_path=?, notes=?, updated_at=CURRENT_TIMESTAMP 
            WHERE id=?`,
-        [d.tender_id, d.procuring_entity, d.official, d.proc_type, d.method, d.briefDesc, d.itemNo,
+        [d.tender_id, d.procuring_entity, d.official, d.officer_id||null, d.proc_type, d.method, d.briefDesc, d.itemNo,
          d.itemDesc, d.techSpec, d.quantity, d.pod, d.delivery, d.invRef, d.docPrice, d.lastPurchase,
          d.lastSubmission, d.opening, d.tSec, d.validity, d.liquid, d.tenderPrep, d.reqDocs, 
          d.inspection, d.contact, d.tender_value, d.eligibility, d.publication_date, d.site_visit_date,
@@ -794,13 +892,13 @@ app.post('/api/tenders', authenticate, authorize('admin', 'manager'), (req, res)
          d.document_path, d.notes, d.id]);
       res.json({ ok: true, id: d.id });
     } else {
-      const info = run(`INSERT INTO tenders (tender_id, procuring_entity, official, proc_type, method, 
+      const info = run(`INSERT INTO tenders (tender_id, procuring_entity, official, officer_id, proc_type, method, 
                         briefDesc, itemNo, itemDesc, techSpec, quantity, pod, delivery, invRef, docPrice, 
                         lastPurchase, lastSubmission, opening, tSec, validity, liquid, tenderPrep, reqDocs, 
                         inspection, contact, tender_value, eligibility, publication_date, site_visit_date, 
                         pre_bid_meeting, status, source, sector, assigned_firm_id, is_consortium, 
-                        document_path, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [d.tender_id||'', d.procuring_entity||'', d.official||'', d.proc_type||'', d.method||'', 
+                        document_path, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [d.tender_id||'', d.procuring_entity||'', d.official||'', d.officer_id||null, d.proc_type||'', d.method||'', 
          d.briefDesc||'', d.itemNo||'', d.itemDesc||'', d.techSpec||'', d.quantity||'', d.pod||'', 
          d.delivery||'', d.invRef||'', d.docPrice||'', d.lastPurchase||'', d.lastSubmission||'', 
          d.opening||'', d.tSec||'', d.validity||'', d.liquid||'', d.tenderPrep||'', d.reqDocs||'', 
@@ -1156,6 +1254,1320 @@ app.delete('/api/team-members/:id', authenticate, authorize('admin', 'manager'),
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// ============================================
+// OFFICERS DIRECTORY (Phase 3-5)
+// ============================================
+
+// Get all officers with filters (authenticated users only - internal system)
+app.get('/api/officers', authenticate, (req, res) => {
+  try {
+    const { 
+      search, designation_id, office_id, status, 
+      gender, district, division, position_id,
+      joining_date_from, joining_date_to,
+      sort_by, sort_order,
+      page, limit 
+    } = req.query;
+    
+    let query = `
+      SELECT 
+        o.id, o.full_name, o.name_bangla, o.employee_id,
+        o.personal_mobile, o.official_mobile, o.personal_email, o.official_email,
+        o.designation_id, o.office_id, o.employment_status, o.photo_url,
+        o.current_grade, o.joining_date, o.department, o.gender, o.district, o.division,
+        o.date_of_birth, o.nid_number, o.blood_group,
+        d.title as designation_title, d.title_bangla as designation_title_bangla,
+        of.office_name, of.office_code, of.district as office_district,
+        p.title as position_title
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      LEFT JOIN positions p ON o.position_id = p.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    // Search filter - search across multiple fields
+    if (search) {
+      query += ` AND (
+        o.full_name LIKE ? OR 
+        o.name_bangla LIKE ? OR 
+        o.employee_id LIKE ? OR 
+        o.personal_mobile LIKE ? OR
+        o.official_mobile LIKE ? OR
+        o.personal_email LIKE ? OR
+        o.nid_number LIKE ? OR
+        d.title LIKE ? OR
+        of.office_name LIKE ? OR
+        p.title LIKE ? OR
+        o.department LIKE ?
+      )`;
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
+    }
+    
+    // Designation filter
+    if (designation_id) {
+      query += ' AND o.designation_id = ?';
+      params.push(designation_id);
+    }
+    
+    // Office filter
+    if (office_id) {
+      query += ' AND o.office_id = ?';
+      params.push(office_id);
+    }
+    
+    // Position filter
+    if (position_id) {
+      query += ' AND o.position_id = ?';
+      params.push(position_id);
+    }
+    
+    // Status filter
+    if (status) {
+      query += ' AND o.employment_status = ?';
+      params.push(status);
+    } else {
+      // Default: only show active officers
+      query += ' AND o.employment_status = ?';
+      params.push('active');
+    }
+    
+    // Gender filter
+    if (gender) {
+      query += ' AND o.gender = ?';
+      params.push(gender);
+    }
+    
+    // District filter
+    if (district) {
+      query += ' AND o.district = ?';
+      params.push(district);
+    }
+    
+    // Division filter
+    if (division) {
+      query += ' AND o.division = ?';
+      params.push(division);
+    }
+    
+    // Date range filters
+    if (joining_date_from) {
+      query += ' AND o.joining_date >= ?';
+      params.push(joining_date_from);
+    }
+    
+    if (joining_date_to) {
+      query += ' AND o.joining_date <= ?';
+      params.push(joining_date_to);
+    }
+    
+    // Sorting
+    const validSortFields = ['full_name', 'employee_id', 'joining_date', 'current_grade', 'designation_title', 'office_name'];
+    const sortField = validSortFields.includes(sort_by) ? sort_by : 'full_name';
+    const sortDirection = sort_order === 'desc' ? 'DESC' : 'ASC';
+    
+    if (sortField === 'designation_title') {
+      query += ` ORDER BY d.title ${sortDirection}`;
+    } else if (sortField === 'office_name') {
+      query += ` ORDER BY of.office_name ${sortDirection}`;
+    } else {
+      query += ` ORDER BY o.${sortField} ${sortDirection}`;
+    }
+    
+    // Pagination
+    const pageNum = parseInt(page) || 1;
+    const pageLimit = parseInt(limit) || 50;
+    const offset = (pageNum - 1) * pageLimit;
+    
+    // Get total count
+    const countQuery = query.replace(/SELECT.*FROM/s, 'SELECT COUNT(*) as total FROM').replace(/ORDER BY.*$/s, '');
+    const { total } = row(countQuery, params);
+    
+    // Get paginated results
+    query += ' LIMIT ? OFFSET ?';
+    params.push(pageLimit, offset);
+    
+    const officers = rows(query, params);
+    
+    // Apply field-level security based on user role and visibility settings
+    const filteredOfficers = applyFieldSecurityToList(officers, req.user);
+    
+    res.json({
+      officers: filteredOfficers,
+      pagination: {
+        page: pageNum,
+        limit: pageLimit,
+        total: filteredOfficers.length,
+        pages: Math.ceil(filteredOfficers.length / pageLimit)
+      }
+    });
+  } catch (err) {
+    console.error('Get officers error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get single officer with full details
+app.get('/api/officers/:id', authenticate, (req, res) => {
+  try {
+    // Get officer basic info
+    const officer = row(`
+      SELECT 
+        o.*,
+        d.title as designation_title, d.title_bangla as designation_title_bangla, d.grade_level,
+        p.title as position_title, p.department as position_department,
+        of.office_name, of.office_name_bangla, of.office_code, of.office_type,
+        of.address as office_address, of.district as office_district, of.division as office_division
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN positions p ON o.position_id = p.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      WHERE o.id = ?
+    `, [req.params.id]);
+    
+    if (!officer) {
+      return res.status(404).json({ error: 'Officer not found' });
+    }
+    
+    // Log access to sensitive fields for audit trail
+    logFieldAccess(
+      db, 
+      req.user?.id, 
+      officer.id, 
+      ['nid_number', 'personal_mobile', 'personal_email', 'basic_salary'],
+      req.ip
+    );
+    
+    // Apply field-level security based on user role and visibility settings
+    const filteredOfficer = applyFieldSecurity(officer, req.user);
+    
+    if (!filteredOfficer) {
+      return res.status(403).json({ error: 'Officer profile not available' });
+    }
+    
+    // Get transfer history
+    const transfers = rows(`
+      SELECT 
+        th.*,
+        of1.office_name as from_office_name, of1.office_code as from_office_code,
+        of2.office_name as to_office_name, of2.office_code as to_office_code,
+        d1.title as from_designation_title,
+        d2.title as to_designation_title
+      FROM transfer_history th
+      LEFT JOIN offices of1 ON th.from_office_id = of1.id
+      LEFT JOIN offices of2 ON th.to_office_id = of2.id
+      LEFT JOIN designations d1 ON th.from_designation_id = d1.id
+      LEFT JOIN designations d2 ON th.to_designation_id = d2.id
+      WHERE th.officer_id = ?
+      ORDER BY th.transfer_date DESC
+    `, [req.params.id]);
+    
+    // Get promotion history
+    const promotions = rows(`
+      SELECT 
+        ph.*,
+        d1.title as from_designation_title,
+        d2.title as to_designation_title
+      FROM promotion_history ph
+      LEFT JOIN designations d1 ON ph.from_designation_id = d1.id
+      LEFT JOIN designations d2 ON ph.to_designation_id = d2.id
+      WHERE ph.officer_id = ?
+      ORDER BY ph.promotion_date DESC
+    `, [req.params.id]);
+    
+    // Get documents
+    const documents = rows(`
+      SELECT * FROM officer_documents
+      WHERE officer_id = ?
+      ORDER BY uploaded_at DESC
+    `, [req.params.id]);
+    
+    // Get related tenders
+    const relatedTenders = rows(`
+      SELECT id, tender_id, procuring_entity, briefDesc, status, 
+             lastSubmission, opening, tender_value, created_at
+      FROM tenders
+      WHERE officer_id = ?
+      ORDER BY created_at DESC
+      LIMIT 10
+    `, [req.params.id]);
+    
+    // Get related projects
+    const relatedProjects = rows(`
+      SELECT id, project_name, contract_number, status, commencement_date, completion_date, contract_value
+      FROM projects
+      WHERE coordinator_id = ?
+      ORDER BY commencement_date DESC
+      LIMIT 10
+    `, [req.params.id]);
+    
+    // Combine transfer and promotion into timeline
+    const timeline = [
+      ...transfers.map(t => ({
+        type: 'transfer',
+        date: t.transfer_date,
+        ...t
+      })),
+      ...promotions.map(p => ({
+        type: 'promotion',
+        date: p.promotion_date,
+        ...p
+      }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    res.json({
+      officer: filteredOfficer,
+      timeline,
+      transfers,
+      promotions,
+      documents,
+      relatedTenders,
+      relatedProjects
+    });
+  } catch (err) {
+    console.error('Get officer details error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get designations list (for filters)
+app.get('/api/designations', authenticate, (req, res) => {
+  try {
+    const designations = rows(`
+      SELECT * FROM designations 
+      WHERE is_active = 1 
+      ORDER BY grade_level, title
+    `);
+    res.json(designations);
+  } catch (err) {
+    console.error('Get designations error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get offices list (for filters)
+app.get('/api/offices', authenticate, (req, res) => {
+  try {
+    const offices = rows(`
+      SELECT * FROM offices 
+      WHERE is_active = 1 
+      ORDER BY office_type, office_name
+    `);
+    res.json(offices);
+  } catch (err) {
+    console.error('Get offices error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get positions list (for dropdowns)
+app.get('/api/positions', authenticate, (req, res) => {
+  try {
+    const positions = rows(`
+      SELECT * FROM positions 
+      WHERE is_active = 1 
+      ORDER BY title
+    `);
+    res.json(positions);
+  } catch (err) {
+    console.error('Get positions error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get officers statistics
+app.get('/api/officers/stats', authenticate, (req, res) => {
+  try {
+    const stats = {
+      total: row('SELECT COUNT(*) as count FROM officers').count,
+      active: row('SELECT COUNT(*) as count FROM officers WHERE employment_status = ?', ['active']).count,
+      inactive: row('SELECT COUNT(*) as count FROM officers WHERE employment_status = ?', ['inactive']).count,
+      retired: row('SELECT COUNT(*) as count FROM officers WHERE employment_status = ?', ['retired']).count,
+      
+      byGender: rows('SELECT gender, COUNT(*) as count FROM officers GROUP BY gender'),
+      byDesignation: rows(`
+        SELECT d.title as designation, COUNT(o.id) as count 
+        FROM officers o 
+        LEFT JOIN designations d ON o.designation_id = d.id 
+        GROUP BY o.designation_id 
+        ORDER BY count DESC 
+        LIMIT 10
+      `),
+      byOffice: rows(`
+        SELECT of.office_name as office, COUNT(o.id) as count 
+        FROM officers o 
+        LEFT JOIN offices of ON o.office_id = of.id 
+        GROUP BY o.office_id 
+        ORDER BY count DESC 
+        LIMIT 10
+      `),
+      byDistrict: rows('SELECT district, COUNT(*) as count FROM officers WHERE district IS NOT NULL GROUP BY district ORDER BY count DESC'),
+      
+      recentJoinings: rows(`
+        SELECT full_name, designation_title, joining_date 
+        FROM (
+          SELECT o.full_name, d.title as designation_title, o.joining_date
+          FROM officers o
+          LEFT JOIN designations d ON o.designation_id = d.id
+          WHERE o.joining_date IS NOT NULL
+          ORDER BY o.joining_date DESC
+          LIMIT 5
+        )
+      `)
+    };
+    
+    res.json(stats);
+  } catch (err) {
+    console.error('Get officers stats error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Export officers to Excel
+app.get('/api/officers/export/excel', authenticate, authorize('admin', 'hr'), async (req, res) => {
+  try {
+    const ExcelJS = require('exceljs');
+    const { search, designation_id, office_id, status } = req.query;
+    
+    // Build query (same filters as list endpoint)
+    let query = `
+      SELECT 
+        o.employee_id, o.full_name, o.name_bangla,
+        o.gender, o.date_of_birth, o.nid_number,
+        o.personal_mobile, o.official_mobile,
+        o.personal_email, o.official_email,
+        o.present_address, o.district, o.division,
+        o.joining_date, o.employment_status, o.current_grade,
+        o.basic_salary, o.education_qualification,
+        d.title as designation, of.office_name as office,
+        p.title as position
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      LEFT JOIN positions p ON o.position_id = p.id
+      WHERE 1=1
+    `;
+    const params = [];
+    
+    if (search) {
+      query += ` AND (o.full_name LIKE ? OR o.employee_id LIKE ?)`;
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (designation_id) {
+      query += ' AND o.designation_id = ?';
+      params.push(designation_id);
+    }
+    if (office_id) {
+      query += ' AND o.office_id = ?';
+      params.push(office_id);
+    }
+    if (status) {
+      query += ' AND o.employment_status = ?';
+      params.push(status);
+    }
+    
+    query += ' ORDER BY o.full_name';
+    
+    const officers = rows(query, params);
+    
+    // Create workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Officers Directory');
+    
+    // Define columns
+    worksheet.columns = [
+      { header: 'Employee ID', key: 'employee_id', width: 15 },
+      { header: 'Full Name', key: 'full_name', width: 25 },
+      { header: 'Name (Bangla)', key: 'name_bangla', width: 25 },
+      { header: 'Designation', key: 'designation', width: 25 },
+      { header: 'Office', key: 'office', width: 30 },
+      { header: 'Position', key: 'position', width: 20 },
+      { header: 'Gender', key: 'gender', width: 10 },
+      { header: 'Date of Birth', key: 'date_of_birth', width: 15 },
+      { header: 'NID', key: 'nid_number', width: 18 },
+      { header: 'Personal Mobile', key: 'personal_mobile', width: 15 },
+      { header: 'Official Mobile', key: 'official_mobile', width: 15 },
+      { header: 'Personal Email', key: 'personal_email', width: 25 },
+      { header: 'Official Email', key: 'official_email', width: 25 },
+      { header: 'Address', key: 'present_address', width: 35 },
+      { header: 'District', key: 'district', width: 15 },
+      { header: 'Division', key: 'division', width: 15 },
+      { header: 'Joining Date', key: 'joining_date', width: 15 },
+      { header: 'Status', key: 'employment_status', width: 12 },
+      { header: 'Grade', key: 'current_grade', width: 10 },
+      { header: 'Basic Salary', key: 'basic_salary', width: 15 },
+      { header: 'Education', key: 'education_qualification', width: 30 }
+    ];
+    
+    // Style header row
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF2c7a3a' }
+    };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    
+    // Add data
+    officers.forEach(officer => {
+      worksheet.addRow(officer);
+    });
+    
+    // Auto-filter
+    worksheet.autoFilter = {
+      from: 'A1',
+      to: 'U1'
+    };
+    
+    // Log activity
+    logActivity(req.user.id, 'officers_exported', null, null, 
+      `Exported ${officers.length} officers to Excel`, req.ip);
+    
+    // Send file
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=officers-${Date.now()}.xlsx`);
+    
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Export officers error:', err);
+    res.status(500).json({ error: 'Export failed' });
+  }
+});
+
+// Create new officer
+app.post('/api/officers', authenticate, authorize('admin', 'hr'), uploadOfficerPhoto.single('photo'), async (req, res) => {
+  try {
+    const officerId = 'officer-' + Date.now();
+    const userId = req.user.id;
+    
+    // Extract form data
+    const {
+      full_name, name_bangla, father_name, mother_name, date_of_birth, gender,
+      blood_group, religion, marital_status, nid_number, passport_number,
+      personal_mobile, official_mobile, personal_email, official_email,
+      emergency_contact_name, emergency_contact_phone,
+      present_address, permanent_address, district, division, post_code,
+      employee_id, joining_date, designation_id, position_id, office_id,
+      department, current_grade, current_salary, employment_status,
+      highest_degree, institution, passing_year, cgpa,
+      phone_visibility, email_visibility, nid_visibility, 
+      profile_published, verification_status, consent_record
+    } = req.body;
+    
+    // Validation
+    if (!full_name || !date_of_birth || !gender || !nid_number || 
+        !personal_mobile || !personal_email || !present_address ||
+        !employee_id || !joining_date || !designation_id || !office_id ||
+        !employment_status || !highest_degree) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Check for duplicates
+    const duplicateCheck = row(`
+      SELECT id FROM officers 
+      WHERE employee_id = ? OR nid_number = ? OR personal_email = ? OR personal_mobile = ?
+    `, [employee_id, nid_number, personal_email, personal_mobile]);
+    
+    if (duplicateCheck) {
+      return res.status(409).json({ error: 'Officer with same employee ID, NID, email, or mobile already exists' });
+    }
+    
+    // Handle photo upload
+    let photoUrl = null;
+    if (req.file) {
+      photoUrl = `/uploads/officers/${req.file.filename}`;
+    }
+    
+    // Insert officer
+    run(`
+      INSERT INTO officers (
+        id, full_name, name_bangla, father_name, mother_name, date_of_birth, gender,
+        blood_group, religion, marital_status, nid_number, passport_number,
+        personal_mobile, official_mobile, personal_email, official_email,
+        emergency_contact_name, emergency_contact_phone,
+        present_address, permanent_address, district, division, post_code,
+        employee_id, joining_date, designation_id, position_id, office_id,
+        department, current_grade, current_salary, employment_status,
+        highest_degree, institution, passing_year, cgpa,
+        photo_url, 
+        phone_visibility, email_visibility, nid_visibility, 
+        profile_published, verification_status, consent_record,
+        created_by, updated_by, created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?,
+        ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, datetime('now'), datetime('now')
+      )
+    `, [
+      officerId, full_name, name_bangla, father_name, mother_name, date_of_birth, gender,
+      blood_group, religion, marital_status, nid_number, passport_number,
+      personal_mobile, official_mobile, personal_email, official_email,
+      emergency_contact_name, emergency_contact_phone,
+      present_address, permanent_address, district, division, post_code,
+      employee_id, joining_date, designation_id, position_id || null, office_id,
+      department, current_grade || null, current_salary || null, employment_status,
+      highest_degree, institution, passing_year || null, cgpa,
+      photoUrl,
+      phone_visibility || 'internal', email_visibility || 'internal', nid_visibility || 'restricted',
+      profile_published == '1' ? 1 : 0, verification_status || 'pending', consent_record || null,
+      userId, userId
+    ]);
+    
+    // Log activity
+    logActivity(userId, 'officer_created', null, null, 
+      `Created officer: ${full_name} (${employee_id})`, req.ip);
+    
+    // Get created officer
+    const officer = row(`
+      SELECT o.*, d.title as designation_title, of.office_name
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      WHERE o.id = ?
+    `, [officerId]);
+    
+    res.status(201).json({ 
+      success: true,
+      message: 'Officer created successfully',
+      officer 
+    });
+  } catch (err) {
+    console.error('Create officer error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create officer' });
+  }
+});
+
+// Update officer
+app.put('/api/officers/:id', authenticate, authorize('admin', 'hr'), uploadOfficerPhoto.single('photo'), async (req, res) => {
+  try {
+    const officerId = req.params.id;
+    const userId = req.user.id;
+    
+    // Check if officer exists
+    const existing = row('SELECT * FROM officers WHERE id = ?', [officerId]);
+    if (!existing) {
+      return res.status(404).json({ error: 'Officer not found' });
+    }
+    
+    // Extract form data
+    const {
+      full_name, name_bangla, father_name, mother_name, date_of_birth, gender,
+      blood_group, religion, marital_status, nid_number, passport_number,
+      personal_mobile, official_mobile, personal_email, official_email,
+      emergency_contact_name, emergency_contact_phone,
+      present_address, permanent_address, district, division, post_code,
+      employee_id, joining_date, designation_id, position_id, office_id,
+      department, current_grade, current_salary, employment_status,
+      highest_degree, institution, passing_year, cgpa,
+      phone_visibility, email_visibility, nid_visibility, 
+      profile_published, verification_status, consent_record
+    } = req.body;
+    
+    // Check for duplicates (excluding current officer)
+    const duplicateCheck = row(`
+      SELECT id FROM officers 
+      WHERE id != ? AND (employee_id = ? OR nid_number = ? OR personal_email = ? OR personal_mobile = ?)
+    `, [officerId, employee_id, nid_number, personal_email, personal_mobile]);
+    
+    if (duplicateCheck) {
+      return res.status(409).json({ error: 'Another officer with same employee ID, NID, email, or mobile already exists' });
+    }
+    
+    // Handle photo upload
+    let photoUrl = existing.photo_url;
+    if (req.file) {
+      photoUrl = `/uploads/officers/${req.file.filename}`;
+      
+      // Delete old photo if exists
+      if (existing.photo_url) {
+        const oldPhotoPath = path.join(__dirname, existing.photo_url);
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+        }
+      }
+    }
+    
+    // Update officer
+    run(`
+      UPDATE officers SET
+        full_name = ?, name_bangla = ?, father_name = ?, mother_name = ?,
+        date_of_birth = ?, gender = ?, blood_group = ?, religion = ?,
+        marital_status = ?, nid_number = ?, passport_number = ?,
+        personal_mobile = ?, official_mobile = ?, personal_email = ?, official_email = ?,
+        emergency_contact_name = ?, emergency_contact_phone = ?,
+        present_address = ?, permanent_address = ?, district = ?, division = ?, post_code = ?,
+        employee_id = ?, joining_date = ?, designation_id = ?, position_id = ?, office_id = ?,
+        department = ?, current_grade = ?, current_salary = ?, employment_status = ?,
+        highest_degree = ?, institution = ?, passing_year = ?, cgpa = ?,
+        photo_url = ?,
+        phone_visibility = ?, email_visibility = ?, nid_visibility = ?,
+        profile_published = ?, verification_status = ?, consent_record = ?,
+        updated_by = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `, [
+      full_name, name_bangla, father_name, mother_name,
+      date_of_birth, gender, blood_group, religion,
+      marital_status, nid_number, passport_number,
+      personal_mobile, official_mobile, personal_email, official_email,
+      emergency_contact_name, emergency_contact_phone,
+      present_address, permanent_address, district, division, post_code,
+      employee_id, joining_date, designation_id, position_id || null, office_id,
+      department, current_grade || null, current_salary || null, employment_status,
+      highest_degree, institution, passing_year || null, cgpa,
+      photoUrl,
+      phone_visibility || 'internal', email_visibility || 'internal', nid_visibility || 'restricted',
+      profile_published == '1' ? 1 : 0, verification_status || 'pending', consent_record || null,
+      userId, officerId
+    ]);
+    
+    // Log activity
+    logActivity(userId, 'officer_updated', null, null,
+      `Updated officer: ${full_name} (${employee_id})`, req.ip);
+    
+    // Get updated officer
+    const officer = row(`
+      SELECT o.*, d.title as designation_title, of.office_name
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      WHERE o.id = ?
+    `, [officerId]);
+    
+    res.json({
+      success: true,
+      message: 'Officer updated successfully',
+      officer
+    });
+  } catch (err) {
+    console.error('Update officer error:', err);
+    res.status(500).json({ error: err.message || 'Failed to update officer' });
+  }
+});
+
+// Delete officer
+app.delete('/api/officers/:id', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const officerId = req.params.id;
+    const userId = req.user.id;
+    
+    // Check if officer exists
+    const existing = row('SELECT * FROM officers WHERE id = ?', [officerId]);
+    if (!existing) {
+      return res.status(404).json({ error: 'Officer not found' });
+    }
+    
+    // Check for dependencies before deleting
+    const dependencies = {
+      transfers: row('SELECT COUNT(*) as count FROM transfer_history WHERE officer_id = ?', [officerId])?.count || 0,
+      promotions: row('SELECT COUNT(*) as count FROM promotion_history WHERE officer_id = ?', [officerId])?.count || 0,
+      documents: row('SELECT COUNT(*) as count FROM officer_documents WHERE officer_id = ?', [officerId])?.count || 0,
+      tenders: row('SELECT COUNT(*) as count FROM tenders WHERE officer_id = ?', [officerId])?.count || 0,
+      projects: row('SELECT COUNT(*) as count FROM projects WHERE coordinator_id = ?', [officerId])?.count || 0
+    };
+    
+    const totalDependencies = Object.values(dependencies).reduce((sum, count) => sum + count, 0);
+    
+    if (totalDependencies > 0) {
+      return res.status(409).json({ 
+        error: 'Cannot delete officer with existing records',
+        details: 'This officer has associated transfers, promotions, documents, tenders, or projects. Please remove or reassign these records first.',
+        dependencies
+      });
+    }
+    
+    // Delete photo file if exists
+    if (existing.photo_url) {
+      const photoPath = path.join(__dirname, existing.photo_url);
+      if (fs.existsSync(photoPath)) {
+        try {
+          fs.unlinkSync(photoPath);
+        } catch (err) {
+          console.error('Failed to delete photo file:', err);
+        }
+      }
+    }
+    
+    // Delete officer record
+    run('DELETE FROM officers WHERE id = ?', [officerId]);
+    
+    // Log activity
+    logActivity(userId, 'officer_deleted', null, null,
+      `Deleted officer: ${existing.full_name} (${existing.employee_id})`, req.ip);
+    
+    res.json({
+      success: true,
+      message: 'Officer deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete officer error:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete officer' });
+  }
+});
+
+// ============================================
+// OFFICER DEEDS (Good/Bad Deed Tracking)
+// ============================================
+
+// Get deed categories
+app.get('/api/deed-categories', authenticate, (req, res) => {
+  try {
+    const { type } = req.query;
+    let query = 'SELECT * FROM deed_categories WHERE is_active = 1';
+    const params = [];
+    
+    if (type) {
+      query += ' AND type = ?';
+      params.push(type);
+    }
+    
+    query += ' ORDER BY name';
+    const categories = rows(query, params);
+    res.json(categories);
+  } catch (err) {
+    console.error('Get deed categories error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Get officer deeds
+app.get('/api/officers/:id/deeds', authenticate, (req, res) => {
+  try {
+    const { deed_type, verification_status } = req.query;
+    
+    let query = 'SELECT * FROM officer_deeds WHERE officer_id = ?';
+    const params = [req.params.id];
+    
+    if (deed_type) {
+      query += ' AND deed_type = ?';
+      params.push(deed_type);
+    }
+    
+    if (verification_status) {
+      query += ' AND verification_status = ?';
+      params.push(verification_status);
+    }
+    
+    query += ' ORDER BY deed_date DESC, created_at DESC';
+    const deeds = rows(query, params);
+    
+    res.json({ deeds });
+  } catch (err) {
+    console.error('Get officer deeds error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Create officer deed
+app.post('/api/officers/:id/deeds', authenticate, authorize('admin', 'hr', 'manager'), (req, res) => {
+  try {
+    const {
+      deed_type, title, description, deed_date, severity,
+      points, category, remarks, is_confidential
+    } = req.body;
+    
+    if (!deed_type || !title || !deed_date) {
+      return res.status(400).json({ error: 'Deed type, title, and date are required' });
+    }
+    
+    if (!['good', 'bad'].includes(deed_type)) {
+      return res.status(400).json({ error: 'Deed type must be "good" or "bad"' });
+    }
+    
+    const deedId = `deed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    run(`
+      INSERT INTO officer_deeds (
+        id, officer_id, deed_type, title, description, deed_date,
+        severity, points, category, reported_by, verification_status,
+        remarks, is_confidential
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+    `, [
+      deedId, req.params.id, deed_type, title, description, deed_date,
+      severity, points || 0, category, req.user.username, remarks, is_confidential || 0
+    ]);
+    
+    // Log activity
+    logger.info('Officer deed recorded', {
+      deedId, officerId: req.params.id, deedType: deed_type,
+      userId: req.user.id, username: req.user.username
+    });
+    
+    const deed = row('SELECT * FROM officer_deeds WHERE id = ?', [deedId]);
+    res.status(201).json(deed);
+  } catch (err) {
+    console.error('Create officer deed error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Update officer deed
+app.put('/api/officers/:officerId/deeds/:deedId', authenticate, authorize('admin', 'hr'), (req, res) => {
+  try {
+    const {
+      title, description, deed_date, severity, points,
+      category, remarks, verification_status
+    } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (title !== undefined) { updates.push('title = ?'); params.push(title); }
+    if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+    if (deed_date !== undefined) { updates.push('deed_date = ?'); params.push(deed_date); }
+    if (severity !== undefined) { updates.push('severity = ?'); params.push(severity); }
+    if (points !== undefined) { updates.push('points = ?'); params.push(points); }
+    if (category !== undefined) { updates.push('category = ?'); params.push(category); }
+    if (remarks !== undefined) { updates.push('remarks = ?'); params.push(remarks); }
+    
+    if (verification_status !== undefined) {
+      if (!['pending', 'verified', 'rejected'].includes(verification_status)) {
+        return res.status(400).json({ error: 'Invalid verification status' });
+      }
+      updates.push('verification_status = ?');
+      params.push(verification_status);
+      updates.push('verified_by = ?');
+      params.push(req.user.username);
+      updates.push('verification_date = CURRENT_DATE');
+    }
+    
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    params.push(req.params.deedId);
+    
+    run(`UPDATE officer_deeds SET ${updates.join(', ')} WHERE id = ?`, params);
+    
+    // Update officer deed counts and points
+    updateOfficerDeedStats(req.params.officerId);
+    
+    const deed = row('SELECT * FROM officer_deeds WHERE id = ?', [req.params.deedId]);
+    res.json(deed);
+  } catch (err) {
+    console.error('Update officer deed error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Delete officer deed
+app.delete('/api/officers/:officerId/deeds/:deedId', authenticate, authorize('admin'), (req, res) => {
+  try {
+    run('DELETE FROM officer_deeds WHERE id = ?', [req.params.deedId]);
+    
+    // Update officer deed counts and points
+    updateOfficerDeedStats(req.params.officerId);
+    
+    logger.info('Officer deed deleted', {
+      deedId: req.params.deedId, officerId: req.params.officerId,
+      userId: req.user.id, username: req.user.username
+    });
+    
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete officer deed error:', err);
+    res.status(500).json({ error: 'DB error' });
+  }
+});
+
+// Helper function to update officer deed statistics
+function updateOfficerDeedStats(officerId) {
+  try {
+    const stats = row(`
+      SELECT 
+        SUM(CASE WHEN deed_type = 'good' AND verification_status = 'verified' THEN 1 ELSE 0 END) as good_count,
+        SUM(CASE WHEN deed_type = 'bad' AND verification_status = 'verified' THEN 1 ELSE 0 END) as bad_count,
+        SUM(CASE WHEN verification_status = 'verified' THEN points ELSE 0 END) as total_points
+      FROM officer_deeds
+      WHERE officer_id = ?
+    `, [officerId]);
+    
+    const goodCount = stats.good_count || 0;
+    const badCount = stats.bad_count || 0;
+    const totalPoints = stats.total_points || 0;
+    
+    // Calculate performance rating
+    let rating = 'average';
+    if (totalPoints >= 100) rating = 'exceptional';
+    else if (totalPoints >= 50) rating = 'excellent';
+    else if (totalPoints >= 20) rating = 'good';
+    else if (totalPoints >= 0) rating = 'average';
+    else if (totalPoints >= -20) rating = 'below_average';
+    else rating = 'poor';
+    
+    run(`
+      UPDATE officers 
+      SET good_deeds_count = ?, bad_deeds_count = ?, deed_points_total = ?, performance_rating = ?
+      WHERE id = ?
+    `, [goodCount, badCount, totalPoints, rating, officerId]);
+    
+  } catch (err) {
+    console.error('Update officer deed stats error:', err);
+  }
+}
+
+// Serve officer creation page
+app.get('/officers/new', authenticate, authorize('admin', 'hr'), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'officers-new.html'));
+});
+
+// Serve officer edit page
+app.get('/officers/:id/edit', authenticate, authorize('admin', 'hr'), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'officers-edit.html'));
+});
+
+// Record officer transfer
+app.post('/api/officers/:id/transfers', authenticate, authorize('admin', 'hr'), async (req, res) => {
+  try {
+    const officerId = req.params.id;
+    const userId = req.user.id;
+    const {
+      transfer_date,
+      from_office_id,
+      to_office_id,
+      from_designation_id,
+      to_designation_id,
+      order_number,
+      order_date,
+      effective_date,
+      remarks
+    } = req.body;
+    
+    // Validation
+    if (!transfer_date || !to_office_id || !effective_date) {
+      return res.status(400).json({ error: 'Transfer date, to office, and effective date are required' });
+    }
+    
+    // Check if officer exists
+    const officer = row('SELECT * FROM officers WHERE id = ?', [officerId]);
+    if (!officer) {
+      return res.status(404).json({ error: 'Officer not found' });
+    }
+    
+    // Validate dates
+    const transferDateObj = new Date(transfer_date);
+    const effectiveDateObj = new Date(effective_date);
+    const today = new Date();
+    
+    if (effectiveDateObj > today) {
+      return res.status(400).json({ error: 'Effective date cannot be in the future' });
+    }
+    
+    // Validate offices are different
+    if (from_office_id === to_office_id) {
+      return res.status(400).json({ error: 'Cannot transfer to the same office' });
+    }
+    
+    const transferId = 'transfer-' + Date.now();
+    
+    // Insert transfer record
+    run(`
+      INSERT INTO transfer_history (
+        id, officer_id, transfer_date, from_office_id, to_office_id,
+        from_designation_id, to_designation_id, order_number, order_date,
+        effective_date, remarks, created_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+      transferId, officerId, transfer_date, from_office_id || officer.office_id,
+      to_office_id, from_designation_id || officer.designation_id,
+      to_designation_id || officer.designation_id, order_number, order_date,
+      effective_date, remarks, userId
+    ]);
+    
+    // Update officer's current office if effective date is today or past
+    if (effectiveDateObj <= today) {
+      run(`
+        UPDATE officers 
+        SET office_id = ?, 
+            designation_id = ?,
+            updated_by = ?, 
+            updated_at = datetime('now')
+        WHERE id = ?
+      `, [to_office_id, to_designation_id || officer.designation_id, userId, officerId]);
+    }
+    
+    // Log activity
+    logActivity(userId, 'officer_transferred', null, null,
+      `Transferred officer ${officer.full_name} from office ${from_office_id} to ${to_office_id}`, req.ip);
+    
+    // Get updated officer with timeline
+    const updatedOfficer = row(`
+      SELECT o.*, d.title as designation_title, of.office_name
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      WHERE o.id = ?
+    `, [officerId]);
+    
+    const transfers = rows(`
+      SELECT th.*,
+        of1.office_name as from_office_name, of1.office_code as from_office_code,
+        of2.office_name as to_office_name, of2.office_code as to_office_code,
+        d1.title as from_designation_title,
+        d2.title as to_designation_title
+      FROM transfer_history th
+      LEFT JOIN offices of1 ON th.from_office_id = of1.id
+      LEFT JOIN offices of2 ON th.to_office_id = of2.id
+      LEFT JOIN designations d1 ON th.from_designation_id = d1.id
+      LEFT JOIN designations d2 ON th.to_designation_id = d2.id
+      WHERE th.officer_id = ?
+      ORDER BY th.transfer_date DESC
+    `, [officerId]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Transfer recorded successfully',
+      officer: updatedOfficer,
+      transfers
+    });
+  } catch (err) {
+    console.error('Record transfer error:', err);
+    res.status(500).json({ error: err.message || 'Failed to record transfer' });
+  }
+});
+
+// Record officer promotion
+app.post('/api/officers/:id/promotions', authenticate, authorize('admin', 'hr'), async (req, res) => {
+  try {
+    const officerId = req.params.id;
+    const userId = req.user.id;
+    const {
+      promotion_date,
+      from_designation_id,
+      to_designation_id,
+      from_grade,
+      to_grade,
+      new_salary,
+      order_number,
+      order_date,
+      effective_date,
+      remarks
+    } = req.body;
+    
+    // Validation
+    if (!promotion_date || !to_designation_id || !effective_date) {
+      return res.status(400).json({ error: 'Promotion date, to designation, and effective date are required' });
+    }
+    
+    // Check if officer exists
+    const officer = row('SELECT * FROM officers WHERE id = ?', [officerId]);
+    if (!officer) {
+      return res.status(404).json({ error: 'Officer not found' });
+    }
+    
+    // Validate dates
+    const promotionDateObj = new Date(promotion_date);
+    const effectiveDateObj = new Date(effective_date);
+    const today = new Date();
+    
+    if (effectiveDateObj > today) {
+      return res.status(400).json({ error: 'Effective date cannot be in the future' });
+    }
+    
+    // Get designation details to validate promotion
+    const fromDesignation = row('SELECT * FROM designations WHERE id = ?', [from_designation_id || officer.designation_id]);
+    const toDesignation = row('SELECT * FROM designations WHERE id = ?', [to_designation_id]);
+    
+    // Validate it's actually a promotion (higher grade)
+    if (toDesignation.grade_level >= fromDesignation.grade_level) {
+      return res.status(400).json({ error: 'To designation must be of higher grade than current designation' });
+    }
+    
+    // Validate grades if provided
+    if (to_grade && from_grade && parseInt(to_grade) <= parseInt(from_grade)) {
+      return res.status(400).json({ error: 'New grade must be higher than current grade' });
+    }
+    
+    const promotionId = 'promotion-' + Date.now();
+    
+    // Insert promotion record
+    run(`
+      INSERT INTO promotion_history (
+        id, officer_id, promotion_date, from_designation_id, to_designation_id,
+        from_grade, to_grade, new_salary, order_number, order_date,
+        effective_date, remarks, created_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+      promotionId, officerId, promotion_date, from_designation_id || officer.designation_id,
+      to_designation_id, from_grade || officer.current_grade, to_grade,
+      new_salary, order_number, order_date, effective_date, remarks, userId
+    ]);
+    
+    // Update officer's current designation and salary if effective date is today or past
+    if (effectiveDateObj <= today) {
+      const updates = {
+        designation_id: to_designation_id,
+        updated_by: userId
+      };
+      
+      if (to_grade) updates.current_grade = to_grade;
+      if (new_salary) updates.current_salary = new_salary;
+      
+      const updateFields = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+      const updateValues = Object.values(updates);
+      
+      run(`
+        UPDATE officers 
+        SET ${updateFields}, updated_at = datetime('now')
+        WHERE id = ?
+      `, [...updateValues, officerId]);
+    }
+    
+    // Log activity
+    logActivity(userId, 'officer_promoted', null, null,
+      `Promoted officer ${officer.full_name} from ${fromDesignation.title} to ${toDesignation.title}`, req.ip);
+    
+    // Get updated officer with timeline
+    const updatedOfficer = row(`
+      SELECT o.*, d.title as designation_title, of.office_name
+      FROM officers o
+      LEFT JOIN designations d ON o.designation_id = d.id
+      LEFT JOIN offices of ON o.office_id = of.id
+      WHERE o.id = ?
+    `, [officerId]);
+    
+    const promotions = rows(`
+      SELECT ph.*,
+        d1.title as from_designation_title,
+        d2.title as to_designation_title
+      FROM promotion_history ph
+      LEFT JOIN designations d1 ON ph.from_designation_id = d1.id
+      LEFT JOIN designations d2 ON ph.to_designation_id = d2.id
+      WHERE ph.officer_id = ?
+      ORDER BY ph.promotion_date DESC
+    `, [officerId]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Promotion recorded successfully',
+      officer: updatedOfficer,
+      promotions
+    });
+  } catch (err) {
+    console.error('Record promotion error:', err);
+    res.status(500).json({ error: err.message || 'Failed to record promotion' });
+  }
+});
+
+// Upload officer document
+app.post('/api/officers/:id/documents', authenticate, authorize('admin', 'hr'), uploadOfficerDoc.single('document'), async (req, res) => {
+  try {
+    const officerId = req.params.id;
+    const userId = req.user.id;
+    const { document_title, document_type, issue_date, expiry_date, issued_by, remarks } = req.body;
+    
+    // Validation
+    if (!document_title || !document_type) {
+      return res.status(400).json({ error: 'Document title and type are required' });
+    }
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    // Check if officer exists
+    const officer = row('SELECT * FROM officers WHERE id = ?', [officerId]);
+    if (!officer) {
+      return res.status(404).json({ error: 'Officer not found' });
+    }
+    
+    const documentId = 'doc-' + Date.now();
+    const filePath = `officer_documents/${officerId}/${req.file.filename}`;
+    
+    // Insert document record
+    run(`
+      INSERT INTO officer_documents (
+        id, officer_id, document_title, document_type, file_path, file_type,
+        file_size, issue_date, expiry_date, issued_by, remarks,
+        uploaded_by, uploaded_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+      documentId, officerId, document_title, document_type, filePath,
+      req.file.mimetype, req.file.size, issue_date || null, expiry_date || null,
+      issued_by || null, remarks || null, userId
+    ]);
+    
+    // Log activity
+    logActivity(userId, 'document_uploaded', null, null,
+      `Uploaded document ${document_title} for officer ${officer.full_name}`, req.ip);
+    
+    // Get all documents for this officer
+    const documents = rows(`
+      SELECT od.*, u.username as uploaded_by_name
+      FROM officer_documents od
+      LEFT JOIN users u ON od.uploaded_by = u.id
+      WHERE od.officer_id = ?
+      ORDER BY od.uploaded_at DESC
+    `, [officerId]);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded successfully',
+      documents
+    });
+  } catch (err) {
+    console.error('Upload document error:', err);
+    res.status(500).json({ error: err.message || 'Failed to upload document' });
+  }
+});
+
+// Delete officer document
+app.delete('/api/officers/documents/:id', authenticate, authorize('admin', 'hr'), async (req, res) => {
+  try {
+    const documentId = req.params.id;
+    const userId = req.user.id;
+    
+    // Get document details
+    const document = row('SELECT * FROM officer_documents WHERE id = ?', [documentId]);
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    // Get officer details for logging
+    const officer = row('SELECT full_name FROM officers WHERE id = ?', [document.officer_id]);
+    
+    // Delete file from filesystem
+    const fs = require('fs');
+    const filePath = path.join(__dirname, 'uploads', document.file_path);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    // Delete from database
+    run('DELETE FROM officer_documents WHERE id = ?', [documentId]);
+    
+    // Log activity
+    logActivity(userId, 'document_deleted', null, null,
+      `Deleted document ${document.document_title} for officer ${officer.full_name}`, req.ip);
+    
+    // Get remaining documents for this officer
+    const documents = rows(`
+      SELECT od.*, u.username as uploaded_by_name
+      FROM officer_documents od
+      LEFT JOIN users u ON od.uploaded_by = u.id
+      WHERE od.officer_id = ?
+      ORDER BY od.uploaded_at DESC
+    `, [document.officer_id]);
+    
+    res.json({
+      success: true,
+      message: 'Document deleted successfully',
+      documents
+    });
+  } catch (err) {
+    console.error('Delete document error:', err);
+    res.status(500).json({ error: err.message || 'Failed to delete document' });
   }
 });
 
@@ -1650,7 +3062,7 @@ app.post('/api/clients/:id/contacts', authenticate, (req, res) => {
 // ============================================
 
 // Login endpoint with rate limiting
-app.post('/api/login', loginLimiter, async (req, res) => {
+app.post('/api/login', loginLimiter, validate(schemas.login), async (req, res) => {
   try {
     const { username, password } = req.body;
     
@@ -1700,6 +3112,9 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     if (!isValidPassword) {
       // Increment failed attempts
       run('UPDATE users SET login_attempts = login_attempts + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+      
+      // Audit failed login
+      auditAuth(false)(req, res, () => {});
       
       const attemptsLeft = maxAttempts - (user.login_attempts + 1);
       logger.security('Failed login attempt', { 
@@ -2519,7 +3934,7 @@ app.put('/api/firms/:firmId/documents/:id', authenticate, checkFirmAccess, uploa
 });
 
 // Delete document
-app.delete('/api/firms/:firmId/documents/:id', authenticate, checkFirmAccess, (req, res) => {
+app.delete('/api/firms/:firmId/documents/:id', authenticate, checkFirmAccess, auditLog('delete', 'document'), (req, res) => {
   try {
     const doc = row('SELECT file_path FROM firm_documents WHERE id = ?', [req.params.id]);
     
@@ -3268,6 +4683,41 @@ app.get('/api/reports/comprehensive/:format', authenticate, authorize('admin'), 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+// ============================================
+// HEALTH CHECK & MONITORING
+// ============================================
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  try {
+    // Check database connection
+    const result = row('SELECT 1 as ok');
+    
+    // Get system info
+    const uptime = process.uptime();
+    const memory = process.memoryUsage();
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: Math.floor(uptime),
+      memory: {
+        rss: Math.round(memory.rss / 1024 / 1024) + 'MB',
+        heapUsed: Math.round(memory.heapUsed / 1024 / 1024) + 'MB',
+        heapTotal: Math.round(memory.heapTotal / 1024 / 1024) + 'MB'
+      },
+      database: result ? 'connected' : 'error',
+      version: '3.0.0'
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: 'Database connection failed',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

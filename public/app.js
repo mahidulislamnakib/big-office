@@ -13,9 +13,13 @@ async function fetchWithAuth(url, options = {}) {
   // Add Authorization header
   const headers = {
     ...options.headers,
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
+    'Authorization': `Bearer ${token}`
   };
+  
+  // Only add Content-Type for non-FormData requests
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
   
   // Make the request
   let response = await fetch(url, { ...options, headers });
@@ -303,6 +307,7 @@ const app = {
 
   currentFirmId: null,
   currentFirmDashboardData: null,
+  appVersion: '2.1.0', // Version marker for cache verification
 
   async viewFirmDashboard(firmId) {
     try {
@@ -380,6 +385,15 @@ const app = {
     document.getElementById('firms').style.display = 'block';
     this.currentFirmId = null;
     this.currentFirmDashboardData = null;
+  },
+
+  editFirm() {
+    // Edit the current firm being viewed in the dashboard
+    if (this.currentFirmId) {
+      this.editItem('firm', this.currentFirmId);
+    } else {
+      alert('No firm selected to edit');
+    }
   },
 
   switchFirmTab(tabName) {
@@ -463,8 +477,17 @@ const app = {
   },
 
   openFirmDocumentModal(docId = null) {
+    console.log('openFirmDocumentModal called - App Version:', this.appVersion, 'Firm ID:', this.currentFirmId, 'Doc ID:', docId);
+    
+    // Validate that a firm is selected
+    if (!this.currentFirmId) {
+      console.error('No firm selected - currentFirmId is:', this.currentFirmId);
+      alert('Please select a firm first');
+      return;
+    }
+    
     // Create a modal for adding/editing documents
-    const modal = document.getElementById('modal');
+    const modal = document.getElementById('universalModal');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
     
@@ -522,7 +545,7 @@ const app = {
           </div>
           <div class="form-group">
             <label>Has Expiry?</label>
-            <select name="has_expiry" onchange="app.toggleExpiryFields(this)">
+            <select name="has_expiry" id="has-expiry-select" onchange="app.toggleExpiryFields(this)">
               <option value="0">No</option>
               <option value="1">Yes</option>
             </select>
@@ -532,11 +555,11 @@ const app = {
         <div class="form-row" id="expiry-fields" style="display: none;">
           <div class="form-group">
             <label>Expiry Date</label>
-            <input type="date" name="expiry_date">
+            <input type="date" name="expiry_date" id="expiry-date-input">
           </div>
           <div class="form-group">
             <label>Reminder Days Before Expiry</label>
-            <input type="number" name="reminder_days" value="30">
+            <input type="number" name="reminder_days" value="30" id="reminder-days-input">
           </div>
         </div>
         
@@ -563,7 +586,7 @@ const app = {
       </form>
     `;
     
-    modal.style.display = 'block';
+    modal.classList.add('active');
   },
 
   toggleExpiryFields(select) {
@@ -579,6 +602,12 @@ const app = {
     event.preventDefault();
     const form = event.target;
     
+    // Validate firm is selected
+    if (!this.currentFirmId) {
+      alert('Error: No firm selected');
+      return;
+    }
+    
     // Use FormData to handle file uploads
     const formData = new FormData(form);
     
@@ -589,10 +618,14 @@ const app = {
       
       const method = docId ? 'PUT' : 'POST';
       
+      console.log('Saving document to:', url, 'Method:', method);
+      
       const res = await fetchWithAuth(url, {
         method: method,
         body: formData // Don't set Content-Type header, let browser set it with boundary
       });
+      
+      console.log('Response status:', res.status);
       
       if (res.ok) {
         const result = await res.json();
@@ -608,6 +641,7 @@ const app = {
         }
       } else {
         const error = await res.json();
+        console.error('Save error:', error);
         alert(`Failed to save document: ${error.message || error.error}`);
       }
     } catch (err) {
@@ -634,10 +668,6 @@ const app = {
             const field = form.querySelector(`[name="${name}"]`);
             if (field && value !== null && value !== undefined) {
               field.value = value;
-              // Trigger change event for has_expiry to show/hide expiry fields
-              if (name === 'has_expiry') {
-                field.dispatchEvent(new Event('change'));
-              }
             }
           };
           
@@ -647,6 +677,13 @@ const app = {
           setField('issuing_authority', doc.issuing_authority);
           setField('issue_date', doc.issue_date);
           setField('has_expiry', doc.has_expiry || 0);
+          
+          // Trigger the expiry toggle after setting the value
+          const hasExpirySelect = form.querySelector('[name="has_expiry"]');
+          if (hasExpirySelect) {
+            this.toggleExpiryFields(hasExpirySelect);
+          }
+          
           setField('expiry_date', doc.expiry_date);
           setField('reminder_days', doc.reminder_days || 30);
           setField('status', doc.status || 'active');
@@ -754,7 +791,23 @@ const app = {
     try {
       const url = `/api/documents/${docId}/view`;
       
-      const loadingTask = pdfjsLib.getDocument(url);
+      // Fetch the PDF with authentication
+      const token = localStorage.getItem('token');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Get the PDF as an ArrayBuffer
+      const pdfData = await response.arrayBuffer();
+      
+      // Load PDF with PDF.js
+      const loadingTask = pdfjsLib.getDocument({ data: pdfData });
       
       loadingTask.promise.then((pdf) => {
         this.pdfDoc = pdf;
@@ -829,6 +882,22 @@ const app = {
     try {
       const url = `/api/documents/${docId}/view`;
       
+      // Fetch the image with authentication
+      const token = localStorage.getItem('token');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Get the image as a blob and create object URL
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      
       const img = document.getElementById('image-preview');
       img.onload = () => {
         document.getElementById('preview-loading').style.display = 'none';
@@ -839,7 +908,7 @@ const app = {
         this.showPreviewError('Failed to load image file');
       };
       
-      img.src = url;
+      img.src = objectUrl;
       
     } catch (err) {
       console.error('Image loading error:', err);

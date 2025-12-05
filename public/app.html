@@ -2,10 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Big Office - Tender Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#2c7a3a">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="Big Office - Comprehensive Office, Projects & Procurement Management Platform">
+  <title>Dashboard - Big Office | Office, Projects & Procurement Management</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    /* Prevent text selection on double-tap */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    
+    /* Allow text selection in inputs and textareas */
+    input, textarea, [contenteditable] {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    
     :root {
       --primary: #2c7a3a;
       --secondary: #6fb93b;
@@ -258,7 +278,6 @@
       font-size: 12px;
       color: #666;
       margin-bottom: 8px;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
@@ -305,7 +324,6 @@
       font-size: 12px;
       font-weight: 600;
       color: #666;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
       border-bottom: 2px solid #dee2e6;
     }
@@ -331,6 +349,31 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Touch feedback for buttons */
+    .btn:active {
+      transform: scale(0.97);
+    }
+    
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+    
+    .btn:active::after {
+      width: 300px;
+      height: 300px;
     }
     
     .btn-primary {
@@ -340,6 +383,11 @@
     
     .btn-primary:hover {
       background: #245c2f;
+      box-shadow: 0 4px 8px rgba(44, 122, 58, 0.3);
+    }
+    
+    .btn-primary:active {
+      box-shadow: 0 2px 4px rgba(44, 122, 58, 0.3);
     }
     
     .btn-secondary {
@@ -347,9 +395,17 @@
       color: white;
     }
     
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+    
     .btn-danger {
       background: var(--danger);
       color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c82333;
     }
     
     .btn-sm {
@@ -555,7 +611,23 @@
     }
 
     /* Mobile Responsive Styles */
+    /* Mobile Menu Toggle */
+    .mobile-menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
+      margin-right: 12px;
+    }
+
     @media (max-width: 768px) {
+      .mobile-menu-toggle {
+        display: block;
+      }
+
       .topbar {
         padding: 0 12px;
         height: 56px;
@@ -583,25 +655,51 @@
       .sidebar {
         width: 100%;
         height: auto;
-        position: static;
-        padding: 12px 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 0;
+        background: white;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        border-top: 2px solid var(--primary);
       }
 
       .menu {
         display: flex;
         overflow-x: auto;
-        gap: 8px;
-        padding: 0 12px;
+        gap: 0;
+        padding: 0;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .menu::-webkit-scrollbar {
+        display: none;
       }
 
       .menu-item {
+        flex: 1;
         white-space: nowrap;
-        padding: 10px 16px;
-        font-size: 13px;
+        padding: 12px 8px;
+        font-size: 11px;
+        text-align: center;
+        min-width: 70px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        border-radius: 0;
+      }
+
+      .menu-item:hover {
+        background: rgba(44, 122, 58, 0.1);
       }
 
       .main-content {
         margin-left: 0;
+        margin-bottom: 60px;
         padding: 16px 12px;
       }
 
@@ -624,27 +722,87 @@
       .data-table {
         overflow-x: auto;
         display: block;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -12px;
+        padding: 0 12px;
       }
 
       table {
-        min-width: 600px;
+        min-width: 100%;
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 10px 8px;
+        white-space: nowrap;
+      }
+
+      /* Mobile card view for tables */
+      .mobile-card-view tbody tr {
+        display: block;
+        margin-bottom: 16px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        background: white;
+      }
+
+      .mobile-card-view tbody td {
+        display: block;
+        text-align: left !important;
+        padding: 8px 0;
+        border: none;
+      }
+
+      .mobile-card-view tbody td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 8px;
+        color: #666;
+      }
+
+      .mobile-card-view thead {
+        display: none;
       }
 
       .modal-content {
-        width: 95%;
+        width: 100%;
         max-width: 100%;
-        margin: 20px auto;
-        max-height: 90vh;
+        margin: 0;
+        max-height: 100vh;
         overflow-y: auto;
+        border-radius: 0;
       }
 
       .form-row {
         grid-template-columns: 1fr;
       }
 
-      .btn {
-        padding: 10px 16px;
+      .form-group label {
         font-size: 14px;
+        margin-bottom: 6px;
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        font-size: 16px;
+        padding: 12px;
+        -webkit-appearance: none;
+      }
+
+      .btn {
+        padding: 12px 20px;
+        font-size: 15px;
+        min-height: 44px;
+        touch-action: manipulation;
+      }
+
+      .btn-sm {
+        padding: 8px 12px;
+        font-size: 13px;
+        min-height: 36px;
       }
     }
 
@@ -652,6 +810,10 @@
       .topbar {
         padding: 0 8px;
         height: 52px;
+      }
+
+      .logo {
+        font-size: 14px;
       }
 
       .logo span {
@@ -668,28 +830,63 @@
       }
 
       .menu-item {
-        padding: 8px 12px;
-        font-size: 12px;
+        padding: 10px 4px;
+        font-size: 10px;
+        min-width: 60px;
       }
 
       .main-content {
         padding: 12px 8px;
+        margin-bottom: 60px;
+      }
+
+      .page-header h2 {
+        font-size: 20px;
       }
 
       .stat-card {
-        padding: 16px;
+        padding: 14px;
+      }
+
+      .stat-label {
+        font-size: 12px;
       }
 
       .stat-number {
-        font-size: 24px;
+        font-size: 22px;
+      }
+
+      .stats-grid {
+        gap: 10px;
       }
 
       table {
-        font-size: 13px;
+        font-size: 12px;
+      }
+
+      th, td {
+        padding: 8px 6px;
       }
 
       .modal-header h2 {
         font-size: 18px;
+      }
+
+      .modal-header {
+        padding: 14px 16px;
+      }
+
+      .modal-body {
+        padding: 16px;
+      }
+
+      .modal-footer {
+        padding: 14px 16px;
+      }
+
+      /* Hide action buttons text, show only icons on small screens */
+      .btn-sm span:not(.icon) {
+        display: none;
       }
     }
 
@@ -809,6 +1006,7 @@
       
       <div class="menu-section">Team & Tasks</div>
       <div class="menu-item" data-page="team">👤 Team Members</div>
+      <div class="menu-item" data-page="officers">👥 Officers Directory</div>
       <div class="menu-item" data-page="tasks">✅ Tasks</div>
       
       <div class="menu-section">Documents & Finance</div>
@@ -1528,6 +1726,24 @@
         </div>
       </div>
 
+      <!-- Officers Directory (Placeholder - Phase 2) -->
+      <div class="page" id="officers">
+        <div class="page-header">
+          <h1 class="page-title">Officers Directory</h1>
+        </div>
+
+        <div class="card" style="text-align: center; padding: 60px 40px;">
+          <div style="font-size: 80px; margin-bottom: 20px;">👥</div>
+          <h2 style="color: var(--primary); margin-bottom: 16px;">Officers Directory Coming Soon</h2>
+          <p style="color: #666; font-size: 16px; margin-bottom: 30px;">
+            Comprehensive personnel management system is under development in Phase 2
+          </p>
+          <a href="/officers" class="btn btn-primary" style="text-decoration: none;">
+            View Detailed Preview →
+          </a>
+        </div>
+      </div>
+
       <!-- Tasks -->
       <div class="page" id="tasks">
         <div class="page-header">
@@ -1862,7 +2078,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=3.2"></script>
   <script>
     // Check authentication
     if (localStorage.getItem('isLoggedIn') !== 'true') {
