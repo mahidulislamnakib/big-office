@@ -590,6 +590,56 @@
   </footer>
   
   <script>
+    // JWT Authentication Helper
+    async function fetchWithAuth(url, options = {}) {
+      let token = localStorage.getItem('accessToken');
+      
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      let response = await fetch(url, { ...options, headers });
+      
+      if (response.status === 401) {
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (refreshToken) {
+          try {
+            const refreshResponse = await fetch('/api/refresh-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken })
+            });
+            
+            if (refreshResponse.ok) {
+              const data = await refreshResponse.json();
+              localStorage.setItem('accessToken', data.accessToken);
+              localStorage.setItem('refreshToken', data.refreshToken);
+              
+              headers.Authorization = `Bearer ${data.accessToken}`;
+              response = await fetch(url, { ...options, headers });
+            } else {
+              localStorage.clear();
+              window.location.href = '/login';
+              throw new Error('Session expired');
+            }
+          } catch (err) {
+            localStorage.clear();
+            window.location.href = '/login';
+            throw err;
+          }
+        } else {
+          localStorage.clear();
+          window.location.href = '/login';
+          throw new Error('No refresh token');
+        }
+      }
+      
+      return response;
+    }
+    
     // Check authentication
     if (localStorage.getItem('isLoggedIn') !== 'true') {
       window.location.href = '/login';
@@ -603,7 +653,7 @@
     // Load stats
     async function loadStats() {
       try {
-        const response = await fetch('/api/dashboard/stats');
+        const response = await fetchWithAuth('/api/dashboard/stats');
         const stats = await response.json();
         
         document.getElementById('statFirms').textContent = stats.firms?.count || 0;
@@ -618,8 +668,27 @@
     loadStats();
     
     // Handle logout
-    function handleLogout() {
+    async function handleLogout() {
       if (confirm('Are you sure you want to logout?')) {
+        try {
+          // Call logout endpoint
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            await fetch('/api/logout', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Logout error:', err);
+        }
+        
+        // Clear all stored data
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
         window.location.href = '/login';

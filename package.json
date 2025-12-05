@@ -4,14 +4,27 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js",
+    "production": "NODE_ENV=production node server.js",
     "init-db": "node init-db.js",
-    "generate-alerts": "node alert-generator.js"
+    "generate-alerts": "node alert-generator.js",
+    "migrate-passwords": "node migrate-passwords.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.8.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "express": "^4.18.2",
-    "multer": "^2.0.2"
+    "express-rate-limit": "^8.2.1",
+    "express-session": "^1.18.2",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
+    "winston": "^3.18.3"
   }
 }

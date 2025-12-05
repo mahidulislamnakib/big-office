@@ -15,7 +15,6 @@ const { authenticate, authorize, checkFirmAccess, logActivity, logRequest } = re
 const { hashPassword, comparePassword, validatePasswordStrength } = require('./utils/password');
 const { generateTokenPair, verifyRefreshToken } = require('./utils/jwt');
 const logger = require('./utils/logger');
-const ReportGenerator = require('./utils/reportGenerator');
 
 const DB_FILE = path.join(__dirname, 'data', 'tenders.db');
 if (!fs.existsSync(DB_FILE)) {
@@ -48,7 +47,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs (increased for testing)
+  max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later'
 });
 
@@ -1172,7 +1171,7 @@ app.get('/api/tasks', authenticate, (req, res) => {
         tm.name as assigned_to_name,
         f.name as firm_name,
         tn.tender_id as tender_no,
-        p.project_name as project_name
+        p.name as project_name
       FROM tasks t
       LEFT JOIN team_members tm ON t.assigned_to = tm.id
       LEFT JOIN firms f ON t.firm_id = f.id
@@ -1225,7 +1224,7 @@ app.get('/api/tasks/:id', authenticate, (req, res) => {
         tb.name as assigned_by_name,
         f.name as firm_name,
         tn.tender_id as tender_no,
-        p.project_name as project_name
+        p.name as project_name
       FROM tasks t
       LEFT JOIN team_members tm ON t.assigned_to = tm.id
       LEFT JOIN team_members tb ON t.assigned_by = tb.id
@@ -1398,7 +1397,7 @@ app.get('/api/suppliers/:id', authenticate, (req, res) => {
     
     // Get transaction history
     const transactions = rows(`
-      SELECT st.*, p.project_name as project_name
+      SELECT st.*, p.name as project_name
       FROM supplier_transactions st
       LEFT JOIN projects p ON st.project_id = p.id
       WHERE st.supplier_id = ?
@@ -1975,7 +1974,7 @@ app.post('/api/tender-summaries', authenticate, (req, res) => {
         preparation_days, execution_days, risk_level, risks, mitigation_plans,
         executive_summary, recommendation, confidence_level, notes,
         firm_id, tender_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       egp_tender_id, procuring_entity, official_inviting_tender, brief_description,
       invitation_reference, invitation_date, document_price, document_purchase_deadline,
@@ -2252,7 +2251,7 @@ app.delete('/api/letter-templates/:id', authenticate, authorize('admin', 'manage
 // Generated Letters
 app.get('/api/generated-letters', authenticate, (req, res) => {
   const rows = all(`
-    SELECT gl.*, f.name as firm_name, p.project_name as project_name, u.username as generated_by_name
+    SELECT gl.*, f.name as firm_name, p.name as project_name, u.username as generated_by_name
     FROM generated_letters gl
     LEFT JOIN firms f ON gl.firm_id = f.id
     LEFT JOIN projects p ON gl.project_id = p.id
@@ -2656,7 +2655,7 @@ app.get('/api/expenses', (req, res) => {
   const { status, firm_id, project_id, start_date, end_date } = req.query;
   let sql = `
     SELECT e.*, ec.name as category_name, ec.icon as category_icon,
-           f.name as firm_name, p.project_name as project_name, u.username as created_by_name
+           f.name as firm_name, p.name as project_name, u.username as created_by_name
     FROM expenses e
     LEFT JOIN expense_categories ec ON e.category_id = ec.id
     LEFT JOIN firms f ON e.firm_id = f.id
@@ -2797,7 +2796,7 @@ app.get('/api/expenses/stats/by-category', (req, res) => {
 // Expense Budgets
 app.get('/api/expense-budgets', (req, res) => {
   const rows = all(`
-    SELECT eb.*, ec.name as category_name, p.project_name as project_name
+    SELECT eb.*, ec.name as category_name, p.name as project_name
     FROM expense_budgets eb
     LEFT JOIN expense_categories ec ON eb.category_id = ec.id
     LEFT JOIN projects p ON eb.project_id = p.id
@@ -2827,448 +2826,6 @@ app.put('/api/expense-budgets/:id', (req, res) => {
 app.delete('/api/expense-budgets/:id', (req, res) => {
   run('DELETE FROM expense_budgets WHERE id = ?', [req.params.id]);
   res.json({ success: true });
-});
-
-// ============================================
-// REPORT EXPORT ENDPOINTS
-// ============================================
-
-const reportGenerator = new ReportGenerator(db);
-
-// Export Firms Report
-app.get('/api/reports/firms/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format; // pdf or excel
-    const firmId = req.query.firm_id;
-    
-    let query = 'SELECT * FROM firms';
-    let params = [];
-    
-    if (firmId) {
-      query += ' WHERE id = ?';
-      params.push(firmId);
-    }
-    
-    const firms = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('firms', firms, {
-        firmName: firmId ? firms[0]?.name : 'All Firms'
-      });
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="firms-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('firms', firms);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="firms-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format. Use pdf or excel' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Tenders Report
-app.get('/api/reports/tenders/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const status = req.query.status;
-    const firmId = req.query.firm_id;
-    
-    let query = `
-      SELECT t.*, f.name as firm_name
-      FROM tenders t
-      LEFT JOIN firms f ON t.firm_id = f.id
-      WHERE 1=1
-    `;
-    const params = [];
-    
-    if (status) {
-      query += ' AND t.status = ?';
-      params.push(status);
-    }
-    
-    if (firmId) {
-      query += ' AND t.firm_id = ?';
-      params.push(firmId);
-    }
-    
-    query += ' ORDER BY t.created_at DESC';
-    
-    const tenders = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('tenders', tenders);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="tenders-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('tenders', tenders);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="tenders-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Tender Summary Report
-app.get('/api/reports/tender-summary/:id/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const summaryId = req.params.id;
-    
-    const summary = row('SELECT * FROM tender_summaries WHERE id = ?', [summaryId]);
-    if (!summary) {
-      return res.status(404).json({ error: 'Tender summary not found' });
-    }
-    
-    // Get items
-    summary.items = rows('SELECT * FROM tender_summary_items WHERE summary_id = ? ORDER BY item_no', [summaryId]);
-    
-    // Get requirements
-    summary.requirements = rows('SELECT * FROM tender_preparation_requirements WHERE summary_id = ?', [summaryId]);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('tender-summary', summary);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="tender-summary-${summaryId}-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('tender-summary', summary);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="tender-summary-${summaryId}-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Projects Report
-app.get('/api/reports/projects/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const status = req.query.status;
-    const firmId = req.query.firm_id;
-    
-    let query = `
-      SELECT p.*, f.name as firm_name
-      FROM projects p
-      LEFT JOIN firms f ON p.firm_id = f.id
-      WHERE 1=1
-    `;
-    const params = [];
-    
-    if (status) {
-      query += ' AND p.status = ?';
-      params.push(status);
-    }
-    
-    if (firmId) {
-      query += ' AND p.firm_id = ?';
-      params.push(firmId);
-    }
-    
-    query += ' ORDER BY p.created_at DESC';
-    
-    const projects = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('projects', projects);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="projects-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('projects', projects);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="projects-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Financial Report
-app.get('/api/reports/financial/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const firmId = req.query.firm_id;
-    
-    const data = {};
-    
-    // Bank Accounts
-    let query = 'SELECT * FROM bank_accounts';
-    let params = [];
-    if (firmId) {
-      query += ' WHERE firm_id = ?';
-      params.push(firmId);
-    }
-    data.bankAccounts = rows(query, params);
-    
-    // Loans
-    query = 'SELECT * FROM loans';
-    params = [];
-    if (firmId) {
-      query += ' WHERE firm_id = ?';
-      params.push(firmId);
-    }
-    data.loans = rows(query, params);
-    
-    // Bank Guarantees
-    query = 'SELECT * FROM bank_guarantees';
-    params = [];
-    if (firmId) {
-      query += ' WHERE firm_id = ?';
-      params.push(firmId);
-    }
-    data.guarantees = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('financial', data);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="financial-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('financial', data);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="financial-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Expenses Report
-app.get('/api/reports/expenses/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const startDate = req.query.start_date;
-    const endDate = req.query.end_date;
-    const categoryId = req.query.category_id;
-    
-    let query = `
-      SELECT e.*, ec.name as category_name, f.name as firm_name
-      FROM expenses e
-      LEFT JOIN expense_categories ec ON e.category_id = ec.id
-      LEFT JOIN firms f ON e.firm_id = f.id
-      WHERE 1=1
-    `;
-    const params = [];
-    
-    if (startDate) {
-      query += ' AND e.expense_date >= ?';
-      params.push(startDate);
-    }
-    
-    if (endDate) {
-      query += ' AND e.expense_date <= ?';
-      params.push(endDate);
-    }
-    
-    if (categoryId) {
-      query += ' AND e.category_id = ?';
-      params.push(categoryId);
-    }
-    
-    query += ' ORDER BY e.expense_date DESC';
-    
-    const expenses = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('expenses', expenses);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="expenses-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('expenses', expenses);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="expenses-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Team Report
-app.get('/api/reports/team/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const firmId = req.query.firm_id;
-    
-    let query = 'SELECT * FROM team_members';
-    let params = [];
-    
-    if (firmId) {
-      query += ' WHERE firm_id = ?';
-      params.push(firmId);
-    }
-    
-    query += ' ORDER BY name';
-    
-    const team = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('team', team);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="team-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('team', team);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="team-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Contacts Report
-app.get('/api/reports/contacts/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const contactType = req.query.contact_type;
-    const firmId = req.query.firm_id;
-    
-    let query = 'SELECT * FROM contacts WHERE 1=1';
-    const params = [];
-    
-    if (contactType) {
-      query += ' AND contact_type = ?';
-      params.push(contactType);
-    }
-    
-    if (firmId) {
-      query += ' AND firm_id = ?';
-      params.push(firmId);
-    }
-    
-    query += ' ORDER BY name';
-    
-    const contacts = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('contacts', contacts);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="contacts-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('contacts', contacts);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="contacts-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Licenses Report
-app.get('/api/reports/licenses/:format', authenticate, async (req, res) => {
-  try {
-    const format = req.params.format;
-    const firmId = req.query.firm_id;
-    
-    let query = 'SELECT * FROM licenses';
-    let params = [];
-    
-    if (firmId) {
-      query += ' WHERE firm_id = ?';
-      params.push(firmId);
-    }
-    
-    query += ' ORDER BY expiry_date DESC';
-    
-    const licenses = rows(query, params);
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('licenses', licenses);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="licenses-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('licenses', licenses);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="licenses-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
-});
-
-// Export Comprehensive Report (All data)
-app.get('/api/reports/comprehensive/:format', authenticate, authorize('admin'), async (req, res) => {
-  try {
-    const format = req.params.format;
-    
-    const data = {
-      stats: {
-        totalFirms: row('SELECT COUNT(*) as count FROM firms')?.count || 0,
-        activeTenders: row('SELECT COUNT(*) as count FROM tenders WHERE status = ?', ['active'])?.count || 0,
-        ongoingProjects: row('SELECT COUNT(*) as count FROM projects WHERE status = ?', ['ongoing'])?.count || 0,
-        totalTeam: row('SELECT COUNT(*) as count FROM team_members WHERE status = ?', ['active'])?.count || 0
-      },
-      firms: rows('SELECT * FROM firms LIMIT 50'),
-      tenders: rows('SELECT * FROM tenders WHERE status = ? LIMIT 50', ['active']),
-      projects: rows('SELECT * FROM projects WHERE status = ? LIMIT 50', ['ongoing']),
-      financial: {
-        bankAccounts: rows('SELECT * FROM bank_accounts LIMIT 20'),
-        loans: rows('SELECT * FROM loans WHERE status = ? LIMIT 20', ['active']),
-        guarantees: rows('SELECT * FROM bank_guarantees WHERE status = ? LIMIT 20', ['active'])
-      }
-    };
-    
-    if (format === 'pdf') {
-      const pdfBuffer = await reportGenerator.generatePDF('comprehensive', data);
-      res.contentType('application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="comprehensive-report-${Date.now()}.pdf"`);
-      res.send(pdfBuffer);
-    } else if (format === 'excel') {
-      const excelBuffer = await reportGenerator.generateExcel('comprehensive', data);
-      res.contentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="comprehensive-report-${Date.now()}.xlsx"`);
-      res.send(excelBuffer);
-    } else {
-      res.status(400).json({ error: 'Invalid format' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate report' });
-  }
 });
 
 // ============================================

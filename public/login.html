@@ -246,6 +246,10 @@
         const data = await response.json();
         
         if (response.ok && data.ok) {
+          // Store JWT tokens
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          
           // Store user info
           localStorage.setItem('user', JSON.stringify(data.user));
           localStorage.setItem('isLoggedIn', 'true');

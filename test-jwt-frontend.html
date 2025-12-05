@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JWT Frontend Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+    .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>JWT Frontend Integration Test</h1>
+  
+  <div>
+    <h2>Step 1: Login</h2>
+    <button onclick="testLogin()">Test Login</button>
+    <div id="login-result"></div>
+  </div>
+  
+  <div>
+    <h2>Step 2: Test Protected Endpoint</h2>
+    <button onclick="testProtectedEndpoint()">Test /api/dashboard/stats</button>
+    <div id="protected-result"></div>
+  </div>
+  
+  <div>
+    <h2>Step 3: Test Token Refresh</h2>
+    <button onclick="testTokenRefresh()">Test Token Refresh</button>
+    <div id="refresh-result"></div>
+  </div>
+  
+  <div>
+    <h2>Step 4: Clear Tokens & Test</h2>
+    <button onclick="clearTokens()">Clear All Tokens</button>
+    <button onclick="testWithoutToken()">Test Without Token (Should Fail)</button>
+    <div id="no-token-result"></div>
+  </div>
+
+  <script>
+    // JWT Authentication Helper (same as in app.js)
+    async function fetchWithAuth(url, options = {}) {
+      let token = localStorage.getItem('accessToken');
+      
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+      
+      let response = await fetch(url, { ...options, headers });
+      
+      if (response.status === 401) {
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (refreshToken) {
+          try {
+            const refreshResponse = await fetch('/api/refresh-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken })
+            });
+            
+            if (refreshResponse.ok) {
+              const data = await refreshResponse.json();
+              localStorage.setItem('accessToken', data.accessToken);
+              localStorage.setItem('refreshToken', data.refreshToken);
+              
+              headers.Authorization = `Bearer ${data.accessToken}`;
+              response = await fetch(url, { ...options, headers });
+            } else {
+              throw new Error('Token refresh failed');
+            }
+          } catch (err) {
+            localStorage.clear();
+            throw err;
+          }
+        } else {
+          throw new Error('No refresh token');
+        }
+      }
+      
+      return response;
+    }
+
+    async function testLogin() {
+      const resultDiv = document.getElementById('login-result');
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: 'admin', password: 'Demo@123456' })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.ok) {
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          resultDiv.innerHTML = `
+            <div class="test-result success">
+              <strong>✅ Login Successful!</strong>
+              <pre>User: ${data.user.username}
+Role: ${data.user.role}
+Access Token: ${data.accessToken.substring(0, 50)}...
+Refresh Token: ${data.refreshToken.substring(0, 50)}...</pre>
+            </div>
+          `;
+        } else {
+          throw new Error(data.error || 'Login failed');
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="test-result error"><strong>❌ Login Failed:</strong> ${err.message}</div>`;
+      }
+    }
+
+    async function testProtectedEndpoint() {
+      const resultDiv = document.getElementById('protected-result');
+      try {
+        const response = await fetchWithAuth('/api/dashboard/stats');
+        const data = await response.json();
+        
+        resultDiv.innerHTML = `
+          <div class="test-result success">
+            <strong>✅ Protected Endpoint Success!</strong>
+            <pre>Firms: ${data.firms.count}
+Tenders: ${data.tenders.total.count}
+Projects: ${data.projects.total.count}
+Team Members: ${data.team_members.total.count}</pre>
+          </div>
+        `;
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="test-result error"><strong>❌ Failed:</strong> ${err.message}</div>`;
+      }
+    }
+
+    async function testTokenRefresh() {
+      const resultDiv = document.getElementById('refresh-result');
+      try {
+        const oldToken = localStorage.getItem('accessToken');
+        const refreshToken = localStorage.getItem('refreshToken');
+        
+        if (!refreshToken) {
+          throw new Error('No refresh token found. Please login first.');
+        }
+        
+        const response = await fetch('/api/refresh-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          
+          resultDiv.innerHTML = `
+            <div class="test-result success">
+              <strong>✅ Token Refresh Successful!</strong>
+              <pre>Old Token: ${oldToken.substring(0, 50)}...
+New Token: ${data.accessToken.substring(0, 50)}...
+Tokens are different: ${oldToken !== data.accessToken ? 'Yes' : 'No'}</pre>
+            </div>
+          `;
+        } else {
+          throw new Error(data.error || 'Refresh failed');
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="test-result error"><strong>❌ Failed:</strong> ${err.message}</div>`;
+      }
+    }
+
+    function clearTokens() {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      alert('All tokens cleared!');
+    }
+
+    async function testWithoutToken() {
+      const resultDiv = document.getElementById('no-token-result');
+      try {
+        const response = await fetch('/api/dashboard/stats');
+        const data = await response.json();
+        
+        if (response.status === 401) {
+          resultDiv.innerHTML = `
+            <div class="test-result success">
+              <strong>✅ Correct Behavior!</strong>
+              <p>API correctly rejected request without token (401 Unauthorized)</p>
+              <pre>${JSON.stringify(data, null, 2)}</pre>
+            </div>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="test-result error">
+              <strong>❌ Security Issue!</strong>
+              <p>API should reject requests without token but it didn't (Status: ${response.status})</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<div class="test-result error"><strong>❌ Failed:</strong> ${err.message}</div>`;
+      }
+    }
+
+    // Display current token status on load
+    window.onload = function() {
+      const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (accessToken && refreshToken) {
+        console.log('Tokens found in localStorage');
+        console.log('Access Token:', accessToken.substring(0, 50) + '...');
+        console.log('Refresh Token:', refreshToken.substring(0, 50) + '...');
+      } else {
+        console.log('No tokens found. Please login.');
+      }
+    };
+  </script>
+</body>
+</html>

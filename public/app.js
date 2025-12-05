@@ -5,6 +5,67 @@ let currentModal = null;
 let currentId = null;
 let currentUser = null;
 
+// JWT Authentication Helper
+async function fetchWithAuth(url, options = {}) {
+  // Get access token
+  let token = localStorage.getItem('accessToken');
+  
+  // Add Authorization header
+  const headers = {
+    ...options.headers,
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+  
+  // Make the request
+  let response = await fetch(url, { ...options, headers });
+  
+  // If token expired (401), try to refresh
+  if (response.status === 401) {
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    if (refreshToken) {
+      try {
+        // Attempt to refresh token
+        const refreshResponse = await fetch('/api/refresh-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          
+          // Store new tokens
+          localStorage.setItem('accessToken', data.accessToken);
+          localStorage.setItem('refreshToken', data.refreshToken);
+          
+          // Retry original request with new token
+          headers.Authorization = `Bearer ${data.accessToken}`;
+          response = await fetch(url, { ...options, headers });
+        } else {
+          // Refresh failed, redirect to login
+          localStorage.clear();
+          window.location.href = '/login';
+          throw new Error('Session expired');
+        }
+      } catch (err) {
+        // Refresh failed, redirect to login
+        localStorage.clear();
+        window.location.href = '/login';
+        throw err;
+      }
+    } else {
+      // No refresh token, redirect to login
+      localStorage.clear();
+      window.location.href = '/login';
+      throw new Error('No refresh token');
+    }
+  }
+  
+  return response;
+}
+
 const app = {
   init() {
     // Load user from localStorage
@@ -96,11 +157,11 @@ const app = {
       const firmParam = firmFilter ? `?firm_id=${firmFilter}` : '';
       
       const [stats, tenders, alerts, bgs, tasks] = await Promise.all([
-        fetch(`${API}/dashboard/stats${firmParam}`).then(r => r.json()),
-        fetch(`${API}/tenders${firmParam}`).then(r => r.json()),
-        fetch(`${API}/alerts${firmParam ? firmParam + '&' : '?'}status=pending`).then(r => r.json()),
-        fetch(`${API}/bank-guarantees${firmParam}`).then(r => r.json()),
-        fetch(`${API}/tasks${firmParam ? firmParam + '&' : '?'}status=pending`).then(r => r.json())
+        fetchWithAuth(`${API}/dashboard/stats${firmParam}`).then(r => r.json()),
+        fetchWithAuth(`${API}/tenders${firmParam}`).then(r => r.json()),
+        fetchWithAuth(`${API}/alerts${firmParam ? firmParam + '&' : '?'}status=pending`).then(r => r.json()),
+        fetchWithAuth(`${API}/bank-guarantees${firmParam}`).then(r => r.json()),
+        fetchWithAuth(`${API}/tasks${firmParam ? firmParam + '&' : '?'}status=pending`).then(r => r.json())
       ]);
 
       this.animateValue('stat-firms', 0, stats.firms.count, 600);
@@ -195,7 +256,7 @@ const app = {
       const firmFilter = this.getUserFirmFilter();
       const url = firmFilter ? `${API}/firms?id=${firmFilter}` : `${API}/firms`;
       
-      const firms = await fetch(url).then(r => r.json());
+      const firms = await fetchWithAuth(url).then(r => r.json());
       currentFirms = Array.isArray(firms) ? firms : [firms]; // Handle single firm response
       
       const list = document.getElementById('firms-list');
@@ -252,7 +313,7 @@ const app = {
       document.getElementById('firm-dashboard').style.display = 'block';
       
       // Load dashboard data
-      const res = await fetch(`${API}/firms/${firmId}/dashboard`);
+      const res = await fetchWithAuth(`${API}/firms/${firmId}/dashboard`);
       const data = await res.json();
       this.currentFirmDashboardData = data;
       
@@ -339,7 +400,7 @@ const app = {
 
   async loadFirmDocuments() {
     try {
-      const res = await fetch(`${API}/firms/${this.currentFirmId}/documents`);
+      const res = await fetchWithAuth(`${API}/firms/${this.currentFirmId}/documents`);
       const documents = await res.json();
       
       const list = document.getElementById('firm-documents-list');
@@ -528,7 +589,7 @@ const app = {
       
       const method = docId ? 'PUT' : 'POST';
       
-      const res = await fetch(url, {
+      const res = await fetchWithAuth(url, {
         method: method,
         body: formData // Don't set Content-Type header, let browser set it with boundary
       });
@@ -558,7 +619,7 @@ const app = {
   async editFirmDocument(docId) {
     try {
       // Fetch document details
-      const res = await fetch(`${API}/firms/${this.currentFirmId}/documents/${docId}`);
+      const res = await fetchWithAuth(`${API}/firms/${this.currentFirmId}/documents/${docId}`);
       if (!res.ok) throw new Error('Failed to load document');
       const doc = await res.json();
       
@@ -611,7 +672,7 @@ const app = {
     if (!confirm('Delete this document?')) return;
     
     try {
-      const res = await fetch(`${API}/firms/${this.currentFirmId}/documents/${docId}`, {
+      const res = await fetchWithAuth(`${API}/firms/${this.currentFirmId}/documents/${docId}`, {
         method: 'DELETE'
       });
       
@@ -656,7 +717,7 @@ const app = {
       error.style.display = 'none';
       
       // Get document info
-      const docRes = await fetch(`${API}/firms/${this.currentFirmId}/documents`);
+      const docRes = await fetchWithAuth(`${API}/firms/${this.currentFirmId}/documents`);
       const documents = await docRes.json();
       const doc = documents.find(d => d.id === docId);
       
@@ -922,7 +983,7 @@ const app = {
       if (finalFirmFilter) params.push(`firm_id=${finalFirmFilter}`);
       if (params.length) url += '?' + params.join('&');
       
-      let licenses = await fetch(url).then(r => r.json());
+      let licenses = await fetchWithAuth(url).then(r => r.json());
       
       if (typeFilter) {
         licenses = licenses.filter(l => l.license_type === typeFilter);
@@ -959,7 +1020,7 @@ const app = {
 
   async loadEnlistments() {
     try {
-      const enlistments = await fetch(`${API}/enlistments`).then(r => r.json());
+      const enlistments = await fetchWithAuth(`${API}/enlistments`).then(r => r.json());
       
       const list = document.getElementById('enlistments-list');
       if (enlistments.length === 0) {
@@ -993,7 +1054,7 @@ const app = {
 
   async loadTaxCompliance() {
     try {
-      const tax = await fetch(`${API}/tax-compliance`).then(r => r.json());
+      const tax = await fetchWithAuth(`${API}/tax-compliance`).then(r => r.json());
       
       const list = document.getElementById('tax-list');
       if (tax.length === 0) {
@@ -1022,7 +1083,7 @@ const app = {
 
   async loadBankAccounts() {
     try {
-      const accounts = await fetch(`${API}/bank-accounts`).then(r => r.json());
+      const accounts = await fetchWithAuth(`${API}/bank-accounts`).then(r => r.json());
       
       const list = document.getElementById('accounts-list');
       if (accounts.length === 0) {
@@ -1051,7 +1112,7 @@ const app = {
 
   async loadPayOrders() {
     try {
-      const payorders = await fetch(`${API}/pay-orders`).then(r => r.json());
+      const payorders = await fetchWithAuth(`${API}/pay-orders`).then(r => r.json());
       
       const list = document.getElementById('payorders-list');
       if (payorders.length === 0) {
@@ -1080,7 +1141,7 @@ const app = {
 
   async loadBankGuarantees() {
     try {
-      const guarantees = await fetch(`${API}/bank-guarantees`).then(r => r.json());
+      const guarantees = await fetchWithAuth(`${API}/bank-guarantees`).then(r => r.json());
       
       const list = document.getElementById('guarantees-list');
       if (guarantees.length === 0) {
@@ -1110,7 +1171,7 @@ const app = {
 
   async loadLoans() {
     try {
-      const loans = await fetch(`${API}/loans`).then(r => r.json());
+      const loans = await fetchWithAuth(`${API}/loans`).then(r => r.json());
       
       const list = document.getElementById('loans-list');
       if (loans.length === 0) {
@@ -1140,7 +1201,7 @@ const app = {
 
   async loadTenders() {
     try {
-      const tenders = await fetch(`${API}/tenders`).then(r => r.json());
+      const tenders = await fetchWithAuth(`${API}/tenders`).then(r => r.json());
       
       const list = document.getElementById('tenders-list');
       if (tenders.length === 0) {
@@ -1169,7 +1230,7 @@ const app = {
 
   async loadProjects() {
     try {
-      const projects = await fetch(`${API}/projects`).then(r => r.json());
+      const projects = await fetchWithAuth(`${API}/projects`).then(r => r.json());
       
       const list = document.getElementById('projects-list');
       if (projects.length === 0) {
@@ -1199,7 +1260,7 @@ const app = {
 
   async loadAllAlerts() {
     try {
-      const alerts = await fetch(`${API}/alerts`).then(r => r.json());
+      const alerts = await fetchWithAuth(`${API}/alerts`).then(r => r.json());
       
       const list = document.getElementById('alerts-list');
       if (alerts.length === 0) {
@@ -1223,7 +1284,7 @@ const app = {
 
   async loadContacts() {
     try {
-      const contacts = await fetch(`${API}/contacts`).then(r => r.json());
+      const contacts = await fetchWithAuth(`${API}/contacts`).then(r => r.json());
       
       const list = document.getElementById('contacts-list');
       if (contacts.length === 0) {
@@ -1253,7 +1314,7 @@ const app = {
     const firmFilter = this.getUserFirmFilter();
     const url = firmFilter ? `${API}/firms?id=${firmFilter}` : `${API}/firms`;
     
-    const firms = await fetch(url).then(r => r.json());
+    const firms = await fetchWithAuth(url).then(r => r.json());
     currentFirms = Array.isArray(firms) ? firms : (firms && firms.id ? [firms] : []);
     
     // Populate firm filters
@@ -2114,7 +2175,7 @@ const app = {
       `,
       'tender-summary': async () => {
         // Load the comprehensive form from external file
-        const response = await fetch('/tender-summary-form.html');
+        const response = await fetchWithAuth('/tender-summary-form.html');
         const formHTML = await response.text();
         return formHTML;
       },
@@ -2300,11 +2361,11 @@ const app = {
     try {
       let data;
       if (['firm', 'tender', 'project', 'team-member', 'task'].includes(type)) {
-        const response = await fetch(endpoints[type]);
+        const response = await fetchWithAuth(endpoints[type]);
         data = await response.json();
         if (type === 'tender' || type === 'project') data = data[type];
       } else {
-        const items = await fetch(endpoints[type]).then(r => r.json());
+        const items = await fetchWithAuth(endpoints[type]).then(r => r.json());
         data = items.find(item => item.id === id);
       }
 
@@ -2343,7 +2404,7 @@ const app = {
     // Populate team member select for tasks
     const teamSelect = document.getElementById('modal-assigned-to');
     if (teamSelect) {
-      const teamRes = await fetch(`${API}/team-members?status=active`);
+      const teamRes = await fetchWithAuth(`${API}/team-members?status=active`);
       const teamMembers = await teamRes.json();
       teamSelect.innerHTML = '<option value="">Select Member...</option>' + 
         teamMembers.map(m => `<option value="${m.id}">${m.name} - ${m.designation || m.role}</option>`).join('');
@@ -2383,7 +2444,7 @@ const app = {
       const method = id ? 'PUT' : 'POST';
       const url = id ? `${endpoints[type]}/${id}` : endpoints[type];
       
-      await fetch(url, {
+      await fetchWithAuth(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -2748,7 +2809,7 @@ const app = {
     };
 
     try {
-      await fetch(endpoints[type], { method: 'DELETE' });
+      await fetchWithAuth(endpoints[type], { method: 'DELETE' });
       this.showPage(type + 's');
       alert('Deleted successfully');
     } catch (err) {
@@ -2759,7 +2820,7 @@ const app = {
 
   async acknowledgeAlert(id) {
     try {
-      await fetch(`${API}/alerts/${id}/acknowledge`, {
+      await fetchWithAuth(`${API}/alerts/${id}/acknowledge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'acknowledged' })
@@ -2774,7 +2835,7 @@ const app = {
   // TEAM MEMBERS
   // ============================================
   async loadTeamMembers() {
-    const res = await fetch(`${API}/team-members`);
+    const res = await fetchWithAuth(`${API}/team-members`);
     const members = await res.json();
     
     const html = members.map(m => `
@@ -2797,7 +2858,7 @@ const app = {
   },
 
   async editTeamMember(id) {
-    const res = await fetch(`${API}/team-members/${id}`);
+    const res = await fetchWithAuth(`${API}/team-members/${id}`);
     const member = await res.json();
     currentId = id;
     
@@ -2806,7 +2867,7 @@ const app = {
 
   async deleteTeamMember(id) {
     if (!confirm('Delete this team member?')) return;
-    await fetch(`${API}/team-members/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/team-members/${id}`, { method: 'DELETE' });
     this.loadTeamMembers();
   },
 
@@ -2823,7 +2884,7 @@ const app = {
     if (priority) url += `priority=${priority}&`;
     if (assigned_to) url += `assigned_to=${assigned_to}&`;
     
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
     const tasks = await res.json();
     
     const html = tasks.map(t => {
@@ -2851,7 +2912,7 @@ const app = {
     document.getElementById('tasks-list').innerHTML = html || '<tr><td colspan="8" style="text-align:center">No tasks</td></tr>';
     
     // Populate team member filter
-    const teamRes = await fetch(`${API}/team-members?status=active`);
+    const teamRes = await fetchWithAuth(`${API}/team-members?status=active`);
     const teamMembers = await teamRes.json();
     const filterSelect = document.getElementById('task-assigned-filter');
     const currentValue = filterSelect.value;
@@ -2860,7 +2921,7 @@ const app = {
   },
 
   async editTask(id) {
-    const res = await fetch(`${API}/tasks/${id}`);
+    const res = await fetchWithAuth(`${API}/tasks/${id}`);
     const task = await res.json();
     currentId = id;
     
@@ -2869,7 +2930,7 @@ const app = {
 
   async deleteTask(id) {
     if (!confirm('Delete this task?')) return;
-    await fetch(`${API}/tasks/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/tasks/${id}`, { method: 'DELETE' });
     this.loadTasks();
   },
 
@@ -2877,7 +2938,7 @@ const app = {
   // SUPPLIERS
   // ============================================
   async loadSuppliers() {
-    const res = await fetch(`${API}/suppliers`);
+    const res = await fetchWithAuth(`${API}/suppliers`);
     const suppliers = await res.json();
     
     const html = suppliers.map(s => `
@@ -2901,7 +2962,7 @@ const app = {
   },
 
   async editSupplier(id) {
-    const res = await fetch(`${API}/suppliers/${id}`);
+    const res = await fetchWithAuth(`${API}/suppliers/${id}`);
     const supplier = await res.json();
     currentId = id;
     this.openModal('supplier', supplier);
@@ -2909,7 +2970,7 @@ const app = {
 
   async deleteSupplier(id) {
     if (!confirm('Delete this supplier?')) return;
-    await fetch(`${API}/suppliers/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/suppliers/${id}`, { method: 'DELETE' });
     this.loadSuppliers();
   },
 
@@ -2917,7 +2978,7 @@ const app = {
   // CLIENTS
   // ============================================
   async loadClients() {
-    const res = await fetch(`${API}/clients`);
+    const res = await fetchWithAuth(`${API}/clients`);
     const clients = await res.json();
     
     const html = clients.map(c => `
@@ -2940,7 +3001,7 @@ const app = {
   },
 
   async editClient(id) {
-    const res = await fetch(`${API}/clients/${id}`);
+    const res = await fetchWithAuth(`${API}/clients/${id}`);
     const client = await res.json();
     currentId = id;
     this.openModal('client', client);
@@ -2948,7 +3009,7 @@ const app = {
 
   async deleteClient(id) {
     if (!confirm('Delete this client?')) return;
-    await fetch(`${API}/clients/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/clients/${id}`, { method: 'DELETE' });
     this.loadClients();
   },
 
@@ -2956,7 +3017,7 @@ const app = {
   // USERS
   // ============================================
   async loadUsers() {
-    const res = await fetch(`${API}/users`);
+    const res = await fetchWithAuth(`${API}/users`);
     const users = await res.json();
     
     const html = users.map(u => `
@@ -2980,7 +3041,7 @@ const app = {
   },
 
   async editUser(id) {
-    const res = await fetch(`${API}/users/${id}`);
+    const res = await fetchWithAuth(`${API}/users/${id}`);
     const user = await res.json();
     currentId = id;
     this.openModal('user', user);
@@ -2988,7 +3049,7 @@ const app = {
 
   async deleteUser(id) {
     if (!confirm('Delete this user? This cannot be undone.')) return;
-    await fetch(`${API}/users/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/users/${id}`, { method: 'DELETE' });
     this.loadUsers();
   },
 
@@ -3008,7 +3069,7 @@ const app = {
     const tenderSelect = document.getElementById('tender_id');
     if (tenderSelect) {
       try {
-        const res = await fetch(`${API}/tenders`);
+        const res = await fetchWithAuth(`${API}/tenders`);
         const tenders = await res.json();
         tenderSelect.innerHTML = '<option value="">Select Tender (Optional)</option>' + 
           tenders.map(t => `<option value="${t.id}">${t.tender_id} - ${t.procuring_entity}</option>`).join('');
@@ -3019,7 +3080,7 @@ const app = {
   },
   
   async loadTenderSummaries() {
-    const res = await fetch(`${API}/tender-summaries`);
+    const res = await fetchWithAuth(`${API}/tender-summaries`);
     const summaries = await res.json();
     
     const html = summaries.map(s => `
@@ -3043,14 +3104,14 @@ const app = {
   },
 
   async viewSummary(id) {
-    const res = await fetch(`${API}/tender-summaries/${id}`);
+    const res = await fetchWithAuth(`${API}/tender-summaries/${id}`);
     const summary = await res.json();
     // TODO: Open a detailed view modal or navigate to a detail page
     alert('View functionality coming soon!\n\nSummary for: ' + summary.project_title);
   },
 
   async editSummary(id) {
-    const res = await fetch(`${API}/tender-summaries/${id}`);
+    const res = await fetchWithAuth(`${API}/tender-summaries/${id}`);
     const summary = await res.json();
     currentId = id;
     this.openModal('tender-summary', summary);
@@ -3058,7 +3119,7 @@ const app = {
 
   async deleteSummary(id) {
     if (!confirm('Delete this tender summary?')) return;
-    await fetch(`${API}/tender-summaries/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/tender-summaries/${id}`, { method: 'DELETE' });
     this.loadTenderSummaries();
   },
 
@@ -3135,7 +3196,7 @@ const app = {
   },
 
   exportTendersToCSV() {
-    fetch(`${API}/tenders`).then(r => r.json()).then(tenders => {
+    fetchWithAuth(`${API}/tenders`).then(r => r.json()).then(tenders => {
       const data = tenders.map(t => ({
         'Tender ID': t.tender_id,
         'Procuring Entity': t.procuring_entity,
@@ -3158,7 +3219,7 @@ const app = {
   },
 
   async loadLetterCategories() {
-    const res = await fetch(`${API}/letter-categories`);
+    const res = await fetchWithAuth(`${API}/letter-categories`);
     const categories = await res.json();
     
     const html = categories.map(c => `
@@ -3177,7 +3238,7 @@ const app = {
   },
 
   async loadLetterTemplates() {
-    const res = await fetch(`${API}/letter-templates`);
+    const res = await fetchWithAuth(`${API}/letter-templates`);
     const templates = await res.json();
     
     const html = templates.map(t => `
@@ -3200,7 +3261,7 @@ const app = {
     // Populate category dropdown in template form
     const categorySelect = document.getElementById('modal-category-id');
     if (categorySelect) {
-      const catRes = await fetch(`${API}/letter-categories`);
+      const catRes = await fetchWithAuth(`${API}/letter-categories`);
       const cats = await catRes.json();
       categorySelect.innerHTML = '<option value="">Select Category</option>' + 
         cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -3210,7 +3271,7 @@ const app = {
   async loadGeneratedLetters() {
     const firmFilter = this.getUserFirmFilter();
     const url = firmFilter ? `${API}/generated-letters?firm_id=${firmFilter}` : `${API}/generated-letters`;
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
     const letters = await res.json();
     
     const html = letters.map(l => `
@@ -3233,13 +3294,13 @@ const app = {
   },
 
   async viewTemplate(id) {
-    const res = await fetch(`${API}/letter-templates/${id}`);
+    const res = await fetchWithAuth(`${API}/letter-templates/${id}`);
     const template = await res.json();
     alert(`Title: ${template.title}\n\nContent:\n${template.content}`);
   },
 
   async viewLetter(id) {
-    const res = await fetch(`${API}/generated-letters/${id}`);
+    const res = await fetchWithAuth(`${API}/generated-letters/${id}`);
     const letter = await res.json();
     alert(`Subject: ${letter.subject}\n\nContent:\n${letter.content}`);
   },
@@ -3254,7 +3315,7 @@ const app = {
   },
 
   async loadExpenseStats() {
-    const res = await fetch(`${API}/expenses/stats/summary`);
+    const res = await fetchWithAuth(`${API}/expenses/stats/summary`);
     const stats = await res.json();
     
     const html = `
@@ -3284,7 +3345,7 @@ const app = {
   },
 
   async loadExpenseCategories() {
-    const res = await fetch(`${API}/expense-categories`);
+    const res = await fetchWithAuth(`${API}/expense-categories`);
     const categories = await res.json();
     
     const html = categories.map(c => `
@@ -3325,7 +3386,7 @@ const app = {
     if (statusFilter) url += `status=${statusFilter}&`;
     if (categoryFilter) url += `category_id=${categoryFilter}&`;
     
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
     const expenses = await res.json();
     
     const html = expenses.map(e => `

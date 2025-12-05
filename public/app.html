@@ -1888,8 +1888,27 @@
     }
     
     // Logout function
-    function handleLogout() {
+    async function handleLogout() {
       if (confirm('Are you sure you want to logout?')) {
+        try {
+          // Call logout endpoint
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            await fetch('/api/logout', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Logout error:', err);
+        }
+        
+        // Clear all stored data
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         localStorage.removeItem('isLoggedIn');
         window.location.href = '/login';
