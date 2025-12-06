@@ -449,9 +449,18 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        // Authentication check
-        const token = localStorage.getItem('token');
+        // Helper function to get cookie value
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Authentication check - use cookie-based auth
+        const token = localStorage.getItem('token') || getCookie('token');
         if (!token) {
+            console.warn('No authentication token found, redirecting to login');
             window.location.href = '/login.html';
         }
 
@@ -486,16 +495,20 @@
 
         // Load all data
         async function loadAllData() {
-            const headers = { 'Authorization': `Bearer ${token}` };
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const fetchOptions = { 
+                headers,
+                credentials: 'include' // Include cookies
+            };
             
             // Load competitors with stats
-            const competitorsRes = await fetch('/api/competitors?limit=100', { headers });
+            const competitorsRes = await fetch('/api/competitors?limit=100', fetchOptions);
             if (!competitorsRes.ok) throw new Error('Failed to load competitors');
             analyticsData.competitors = await competitorsRes.json();
 
             // Load dashboard analytics
             try {
-                const dashboardRes = await fetch('/api/analytics/dashboard', { headers });
+                const dashboardRes = await fetch('/api/analytics/dashboard', fetchOptions);
                 if (dashboardRes.ok) {
                     const dashboardData = await dashboardRes.json();
                     analyticsData.dashboardData = dashboardData;
@@ -843,8 +856,10 @@
         // Export to Excel
         async function exportToExcel() {
             try {
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const response = await fetch('/api/analytics/export', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers,
+                    credentials: 'include'
                 });
                 
                 if (!response.ok) {
