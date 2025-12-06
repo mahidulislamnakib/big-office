@@ -2,6 +2,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./logger');
 
 const DB_FILE = path.join(__dirname, '..', 'data', 'tenders.db');
 
@@ -43,43 +44,132 @@ const rows = (sql, params = []) => db.prepare(sql).all(params);
 const run = (sql, params = []) => db.prepare(sql).run(params);
 
 /**
- * Execute multiple operations in a transaction
+ * Execute multiple operations in a transaction with enhanced logging
  * @param {Function} callback - Function containing database operations
+ * @param {string} requestId - Optional request ID for logging
  * @returns {*} Result from callback
  */
-function transaction(callback) {
+function transaction(callback, requestId = null) {
+  const txId = requestId || `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const beginTransaction = db.prepare('BEGIN IMMEDIATE');
   const commitTransaction = db.prepare('COMMIT');
   const rollbackTransaction = db.prepare('ROLLBACK');
   
   try {
+    logger.info(`[${txId}] Transaction BEGIN`, { requestId: txId });
     beginTransaction.run();
+    
     const result = callback();
+    
     commitTransaction.run();
+    logger.info(`[${txId}] Transaction COMMIT`, { requestId: txId });
     return result;
   } catch (error) {
     rollbackTransaction.run();
+    logger.error(`[${txId}] Transaction ROLLBACK`, { 
+      requestId: txId, 
+      error: error.message,
+      stack: error.stack 
+    });
     throw error;
   }
 }
 
 /**
- * Async transaction wrapper
+ * Async transaction wrapper with enhanced logging
  * @param {Function} callback - Async function containing database operations
+ * @param {string} requestId - Optional request ID for logging
  * @returns {Promise<*>} Result from callback
  */
-async function asyncTransaction(callback) {
+async function asyncTransaction(callback, requestId = null) {
+  const txId = requestId || `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const beginTransaction = db.prepare('BEGIN IMMEDIATE');
   const commitTransaction = db.prepare('COMMIT');
   const rollbackTransaction = db.prepare('ROLLBACK');
   
   try {
+    logger.info(`[${txId}] Async Transaction BEGIN`, { requestId: txId });
     beginTransaction.run();
+    
     const result = await callback();
+    
     commitTransaction.run();
+    logger.info(`[${txId}] Async Transaction COMMIT`, { requestId: txId });
     return result;
   } catch (error) {
     rollbackTransaction.run();
+    logger.error(`[${txId}] Async Transaction ROLLBACK`, { 
+      requestId: txId, 
+      error: error.message,
+      stack: error.stack 
+    });
+    throw error;
+  }
+}
+
+/**
+ * Enhanced transaction wrapper with proper error handling and cleanup
+ * This is the recommended method for all multi-step database operations
+ * @param {Function} handler - Async/sync function containing database operations
+ * @param {Object} options - Transaction options
+ * @param {string} options.requestId - Request ID for logging correlation
+ * @param {string} options.operation - Operation name for logging
+ * @returns {Promise<*>} Result from handler
+ */
+async function withTransaction(handler, options = {}) {
+  const { requestId, operation = 'database-operation' } = options;
+  const txId = requestId || `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  const beginTransaction = db.prepare('BEGIN IMMEDIATE');
+  const commitTransaction = db.prepare('COMMIT');
+  const rollbackTransaction = db.prepare('ROLLBACK');
+  
+  let transactionStarted = false;
+  
+  try {
+    logger.info(`[${txId}] Transaction BEGIN`, { 
+      requestId: txId, 
+      operation,
+      timestamp: new Date().toISOString()
+    });
+    
+    beginTransaction.run();
+    transactionStarted = true;
+    
+    // Execute handler (can be async or sync)
+    const result = await Promise.resolve(handler(db));
+    
+    commitTransaction.run();
+    logger.info(`[${txId}] Transaction COMMIT`, { 
+      requestId: txId, 
+      operation,
+      timestamp: new Date().toISOString()
+    });
+    
+    return result;
+  } catch (error) {
+    if (transactionStarted) {
+      try {
+        rollbackTransaction.run();
+        logger.error(`[${txId}] Transaction ROLLBACK`, { 
+          requestId: txId, 
+          operation,
+          error: error.message,
+          errorCode: error.code,
+          timestamp: new Date().toISOString()
+        });
+      } catch (rollbackError) {
+        logger.error(`[${txId}] Transaction ROLLBACK FAILED`, { 
+          requestId: txId, 
+          operation,
+          originalError: error.message,
+          rollbackError: rollbackError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+    
+    // Re-throw the original error
     throw error;
   }
 }
@@ -196,6 +286,7 @@ module.exports = {
   run,
   transaction,
   asyncTransaction,
+  withTransaction,
   paginate,
   batchInsert,
   softDelete,
