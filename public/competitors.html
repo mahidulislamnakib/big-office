@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competitors - Big Office</title>
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    .competitors-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .page-header h1 {
+      margin: 0;
+      color: #2c3e50;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-add {
+      background: #3498db;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+
+    .btn-add:hover {
+      background: #2980b9;
+    }
+
+    .btn-analytics {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      transition: all 0.3s;
+      box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+      position: relative;
+    }
+
+    .btn-analytics:hover {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    }
+
+    .btn-analytics::after {
+      content: 'View comprehensive analytics, charts and reports';
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .btn-analytics:hover::after {
+      opacity: 1;
+    }
+
+    .filters-bar {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: #7f8c8d;
+      font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .competitors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .competitor-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .competitor-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .competitor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .competitor-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin: 0 0 5px 0;
+    }
+
+    .competitor-name-bn {
+      font-size: 14px;
+      color: #7f8c8d;
+      margin: 0;
+    }
+
+    .competitor-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-active {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge-inactive {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .badge-blacklisted {
+      background: #000;
+      color: #fff;
+    }
+
+    .competitor-info {
+      margin: 15px 0;
+    }
+
+    .info-row {
+      display: flex;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .info-label {
+      color: #7f8c8d;
+      min-width: 100px;
+    }
+
+    .info-value {
+      color: #2c3e50;
+      font-weight: 500;
+    }
+
+    .competitor-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #ecf0f1;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      color: #3498db;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 11px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .competitor-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      background: #ecf0f1;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #34495e;
+    }
+
+    .rating-display {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stars {
+      color: #f39c12;
+      font-size: 14px;
+    }
+
+    .rating-number {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #7f8c8d;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #7f8c8d;
+    }
+
+    .win-rate-bar {
+      width: 100%;
+      height: 6px;
+      background: #ecf0f1;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+
+    .win-rate-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #27ae60, #2ecc71);
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div class="competitors-container">
+    <div class="page-header">
+      <h1>🏢 Competitor Intelligence</h1>
+      <div class="header-actions">
+        <a href="/analytics.html" class="btn-analytics">
+          <span>📊</span> Analytics
+        </a>
+        <a href="/competitor-form.html" class="btn-add">
+          <span>+</span> Add Competitor
+        </a>
+      </div>
+    </div>
+
+    <div class="filters-bar">
+      <div class="filter-group">
+        <label>Search</label>
+        <input type="text" id="searchInput" placeholder="Name, registration, email..." />
+      </div>
+      <div class="filter-group">
+        <label>Sector</label>
+        <select id="sectorFilter">
+          <option value="">All Sectors</option>
+          <option value="Railway">Railway</option>
+          <option value="Road">Road & Highway</option>
+          <option value="Building">Building Construction</option>
+          <option value="Power">Power & Energy</option>
+          <option value="Water">Water Supply</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="statusFilter">
+          <option value="">All</option>
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="competitorsGrid" class="competitors-grid">
+      <div class="loading">
+        <p>Loading competitors...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+  <script>
+    let allCompetitors = [];
+
+    async function loadCompetitors() {
+      try {
+        const params = new URLSearchParams();
+        const search = document.getElementById('searchInput').value;
+        const sector = document.getElementById('sectorFilter').value;
+        const status = document.getElementById('statusFilter').value;
+
+        if (search) params.append('search', search);
+        if (sector) params.append('sector', sector);
+        if (status) params.append('active', status);
+
+        const response = await fetch(`/api/competitors?${params}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch competitors');
+
+        allCompetitors = await response.json();
+        renderCompetitors();
+      } catch (error) {
+        console.error('Error loading competitors:', error);
+        document.getElementById('competitorsGrid').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <p>Failed to load competitors. Please try again.</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderCompetitors() {
+      const grid = document.getElementById('competitorsGrid');
+
+      if (allCompetitors.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🏢</div>
+            <h3>No competitors found</h3>
+            <p>Start by adding your first competitor to track their participation and performance.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = allCompetitors.map(comp => {
+        const statusClass = comp.is_blacklisted ? 'badge-blacklisted' : (comp.is_active ? 'badge-active' : 'badge-inactive');
+        const statusText = comp.is_blacklisted ? 'Blacklisted' : (comp.is_active ? 'Active' : 'Inactive');
+        
+        const stars = '★'.repeat(Math.floor(comp.rating)) + '☆'.repeat(5 - Math.floor(comp.rating));
+        const winRate = parseFloat(comp.win_rate) || 0;
+        
+        const specs = Array.isArray(comp.specialization) ? comp.specialization : [];
+        const sectors = Array.isArray(comp.typical_sectors) ? comp.typical_sectors : [];
+
+        return `
+          <div class="competitor-card" onclick="viewCompetitor('${comp.id}')">
+            <div class="competitor-header">
+              <div>
+                <h3 class="competitor-name">${comp.name}</h3>
+                ${comp.name_bn ? `<p class="competitor-name-bn">${comp.name_bn}</p>` : ''}
+              </div>
+              <span class="competitor-badge ${statusClass}">${statusText}</span>
+            </div>
+
+            <div class="competitor-info">
+              <div class="info-row">
+                <span class="info-label">Registration:</span>
+                <span class="info-value">${comp.registration_no || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Type:</span>
+                <span class="info-value">${formatCompanyType(comp.company_type)}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Rating:</span>
+                <div class="rating-display">
+                  <span class="stars">${stars}</span>
+                  <span class="rating-number">${comp.rating}/5</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="competitor-stats">
+              <div class="stat-item">
+                <span class="stat-value">${comp.total_participations || 0}</span>
+                <span class="stat-label">Participations</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">${comp.total_wins || 0}</span>
+                <span class="stat-label">Wins</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">${winRate.toFixed(0)}%</span>
+                <span class="stat-label">Win Rate</span>
+              </div>
+            </div>
+
+            <div class="win-rate-bar">
+              <div class="win-rate-fill" style="width: ${winRate}%"></div>
+            </div>
+
+            ${specs.length > 0 ? `
+              <div class="competitor-tags">
+                ${specs.slice(0, 3).map(s => `<span class="tag">${s}</span>`).join('')}
+                ${specs.length > 3 ? `<span class="tag">+${specs.length - 3} more</span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatCompanyType(type) {
+      const types = {
+        'proprietorship': 'Proprietorship',
+        'partnership': 'Partnership',
+        'private_limited': 'Private Limited',
+        'public_limited': 'Public Limited',
+        'cooperative': 'Cooperative',
+        'foreign': 'Foreign Company',
+        'joint_venture': 'Joint Venture'
+      };
+      return types[type] || type;
+    }
+
+        function viewCompetitor(id) {
+            window.location.href = `/competitor-detail.html?id=${id}`;
+        }    // Event listeners
+    document.getElementById('searchInput').addEventListener('input', debounce(loadCompetitors, 500));
+    document.getElementById('sectorFilter').addEventListener('change', loadCompetitors);
+    document.getElementById('statusFilter').addEventListener('change', loadCompetitors);
+
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Load on page load
+    loadCompetitors();
+  </script>
+</body>
+</html>
