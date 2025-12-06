@@ -892,6 +892,10 @@
     if (['admin', 'hr'].includes(userRole)) {
       document.getElementById('addOfficerBtn').style.display = 'inline-flex';
       document.getElementById('exportExcelBtn').style.display = 'inline-flex';
+    } else {
+      // Show buttons for all users but they'll be restricted by server-side auth
+      document.getElementById('addOfficerBtn').style.display = 'inline-flex';
+      document.getElementById('exportExcelBtn').style.display = 'inline-flex';
     }
     
     let currentPage = 1;

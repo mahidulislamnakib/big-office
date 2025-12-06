@@ -837,7 +837,7 @@
               <td>${t.tender_id || '-'}</td>
               <td>${t.procuring_entity || '-'}</td>
               <td>${t.proc_type || '-'}</td>
-              <td><span class="badge badge-${getStatusColor(t.status)}">${t.status}</span></td>
+              <td><span class="badge badge-${getStatusColor(t.status)}">${humanizeKey ? humanizeKey(t.status) : t.status}</span></td>
               <td>${t.lastSubmission || '-'}</td>
             </tr>
           `).join('');
@@ -862,7 +862,7 @@
               <td>${f.business_type || '-'}</td>
               <td>${f.tin || '-'}</td>
               <td>${f.mobile || f.phone || '-'}</td>
-              <td><span class="badge badge-${f.status === 'active' ? 'success' : 'secondary'}">${f.status}</span></td>
+              <td><span class="badge badge-${f.status === 'active' ? 'success' : 'secondary'}">${humanizeKey ? humanizeKey(f.status) : f.status}</span></td>
               <td>
                 <button class="btn btn-sm btn-primary" onclick="editFirm(${f.id})">Edit</button>
                 <button class="btn btn-sm btn-secondary" onclick="deleteFirm(${f.id})">Delete</button>
@@ -939,7 +939,7 @@
               <td>${l.license_number || '-'}</td>
               <td>${l.issue_date || '-'}</td>
               <td>${l.expiry_date || '-'}</td>
-              <td><span class="badge badge-${l.status === 'active' ? 'success' : 'danger'}">${l.status}</span></td>
+              <td><span class="badge badge-${l.status === 'active' ? 'success' : 'danger'}">${humanizeKey ? humanizeKey(l.status) : l.status}</span></td>
               <td>
                 <button class="btn btn-sm btn-primary">Edit</button>
                 <button class="btn btn-sm btn-secondary">Delete</button>
@@ -953,6 +953,12 @@
     }
 
     function getStatusColor(status) {
+      // Use getStatusBadgeClass from humanize.js if available
+      if (typeof getStatusBadgeClass === 'function') {
+        return getStatusBadgeClass(status);
+      }
+      
+      // Fallback
       const colors = {
         'discovered': 'info',
         'preparing': 'warning',
@@ -968,5 +974,6 @@
     // Initialize
     loadDashboard();
   </script>
+  <script src="/js/humanize.js"></script>
 </body>
 </html>

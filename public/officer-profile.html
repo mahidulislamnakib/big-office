@@ -1128,9 +1128,220 @@
         padding: 3px 8px;
       }
     }
+    
+    /* ===============================================
+       TOAST NOTIFICATIONS
+       =============================================== */
+    
+    .toast-container {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 400px;
+    }
+    
+    .toast {
+      background: white;
+      border-radius: 8px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 300px;
+      animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-out 4.7s;
+      position: relative;
+      border-left: 4px solid #2c7a3a;
+    }
+    
+    .toast.success {
+      border-left-color: #27ae60;
+    }
+    
+    .toast.error {
+      border-left-color: #e74c3c;
+    }
+    
+    .toast.warning {
+      border-left-color: #f39c12;
+    }
+    
+    .toast.info {
+      border-left-color: #3498db;
+    }
+    
+    .toast-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .toast.success .toast-icon { color: #27ae60; }
+    .toast.error .toast-icon { color: #e74c3c; }
+    .toast.warning .toast-icon { color: #f39c12; }
+    .toast.info .toast-icon { color: #3498db; }
+    
+    .toast-content {
+      flex: 1;
+    }
+    
+    .toast-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: #333;
+    }
+    
+    .toast-message {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.4;
+    }
+    
+    .toast-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #999;
+      cursor: pointer;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .toast-close:hover {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+    }
+    
+    /* ===============================================
+       LOADING OVERLAY
+       =============================================== */
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(2px);
+    }
+    
+    .loading-overlay.active {
+      display: flex;
+    }
+    
+    .loading-spinner {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    
+    .spinner-ring {
+      width: 60px;
+      height: 60px;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #2c7a3a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-size: 14px;
+      color: #666;
+      font-weight: 500;
+    }
+    
+    /* Inline Loading Spinner (for buttons, etc.) */
+    .btn-loading {
+      position: relative;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    
+    /* Mobile toast adjustments */
+    @media (max-width: 768px) {
+      .toast-container {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
+      
+      .toast {
+        min-width: auto;
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+  
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="loading-text" id="loadingText">Processing...</div>
+    </div>
+  </div>
+  
   <div class="topbar">
     <div class="logo">
       👤 <span>Officer Profile</span>
@@ -1387,9 +1598,17 @@
               <h3>⭐ Performance & Conduct Record</h3>
               <p style="color: #666; font-size: 14px; margin-top: 4px;">Track good deeds and incidents</p>
             </div>
-            <button class="btn-action btn-primary" onclick="showAddDeedModal()" id="btnAddDeed" style="display: none;">
-              + Record Deed
-            </button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn-action" onclick="exportDeedsPDF()" title="Export as PDF" style="background: #e74c3c; color: white;">
+                📄 Export PDF
+              </button>
+              <button class="btn-action" onclick="exportDeedsExcel()" title="Export as Excel" style="background: #27ae60; color: white;">
+                📊 Export Excel
+              </button>
+              <button class="btn-action btn-primary" onclick="showAddDeedModal()" id="btnAddDeed" style="display: none;">
+                + Record Deed
+              </button>
+            </div>
           </div>
           
           <!-- Performance Summary -->
@@ -1501,6 +1720,115 @@
       }
       
       return response;
+    }
+    
+    // ===============================================
+    // TOAST NOTIFICATION SYSTEM
+    // ===============================================
+    
+    function showToast(message, type = 'info', title = null, duration = 5000) {
+      const toastContainer = document.getElementById('toastContainer');
+      
+      // Create toast element
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      // Icon based on type
+      const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+      };
+      
+      // Default titles
+      const titles = {
+        success: title || 'Success',
+        error: title || 'Error',
+        warning: title || 'Warning',
+        info: title || 'Information'
+      };
+      
+      toast.innerHTML = `
+        <div class="toast-icon">${icons[type]}</div>
+        <div class="toast-content">
+          <div class="toast-title">${titles[type]}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+      `;
+      
+      toastContainer.appendChild(toast);
+      
+      // Auto remove after duration
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.style.animation = 'fadeOut 0.3s ease-out';
+          setTimeout(() => toast.remove(), 300);
+        }
+      }, duration);
+    }
+    
+    // Convenience functions
+    function showSuccess(message, title = null) {
+      showToast(message, 'success', title);
+    }
+    
+    function showError(message, title = null) {
+      showToast(message, 'error', title);
+    }
+    
+    function showWarning(message, title = null) {
+      showToast(message, 'warning', title);
+    }
+    
+    function showInfo(message, title = null) {
+      showToast(message, 'info', title);
+    }
+    
+    // ===============================================
+    // LOADING OVERLAY SYSTEM
+    // ===============================================
+    
+    function showLoading(text = 'Processing...') {
+      const overlay = document.getElementById('loadingOverlay');
+      const loadingText = document.getElementById('loadingText');
+      loadingText.textContent = text;
+      overlay.classList.add('active');
+    }
+    
+    function hideLoading() {
+      const overlay = document.getElementById('loadingOverlay');
+      overlay.classList.remove('active');
+    }
+    
+    // ===============================================
+    // UTILITY FUNCTIONS
+    // ===============================================
+    
+    // Debounce function to limit API calls
+    function debounce(func, wait = 300) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+    
+    // Throttle function to limit execution frequency
+    function throttle(func, limit = 1000) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      };
     }
     
     // Format date
@@ -1622,7 +1950,7 @@
       
       const statusBadge = officer.employment_status === 'active' 
         ? '<span class="badge badge-active">✓ Active</span>'
-        : `<span class="badge">${officer.employment_status}</span>`;
+        : `<span class="badge">${typeof humanizeKey === 'function' ? humanizeKey(officer.employment_status) : officer.employment_status}</span>`;
       document.getElementById('profileStatus').innerHTML = statusBadge;
       
       document.getElementById('employeeId').textContent = officer.employee_id || '-';
@@ -1797,14 +2125,17 @@
       }
       
       try {
+        showLoading('Deleting document...');
         const result = await fetchWithAuth(`/api/officers/documents/${docId}`, {
           method: 'DELETE'
         });
+        hideLoading();
         
-        alert('Document deleted successfully!');
+        showSuccess('Document deleted successfully!', 'Success');
         renderDocuments(result.documents);
       } catch (err) {
-        alert('Error: ' + (err.message || 'Failed to delete document'));
+        hideLoading();
+        showError(err.message || 'Failed to delete document', 'Error');
       }
     }
     
@@ -1821,7 +2152,7 @@
         <div class="related-item" onclick="window.location.href='/tenders/${tender.id}'">
           <div class="related-item-header">
             <div class="related-item-title">${tender.tender_id || 'N/A'} - ${tender.procuring_entity || 'Unknown'}</div>
-            <span class="related-item-status status-${tender.status}">${tender.status}</span>
+            <span class="related-item-status status-${tender.status}">${typeof humanizeKey === 'function' ? humanizeKey(tender.status) : tender.status}</span>
           </div>
           <div class="related-item-desc">${tender.briefDesc || 'No description'}</div>
           <div class="related-item-meta">
@@ -1846,7 +2177,7 @@
         <div class="related-item" onclick="window.location.href='/projects/${project.id}'">
           <div class="related-item-header">
             <div class="related-item-title">${project.contract_number || 'N/A'} - ${project.project_name}</div>
-            <span class="related-item-status status-${project.status}">${project.status}</span>
+            <span class="related-item-status status-${project.status}">${typeof humanizeKey === 'function' ? humanizeKey(project.status) : project.status}</span>
           </div>
           <div class="related-item-meta">
             ${project.contract_value ? `<span>💰 Value: ${formatCurrency(project.contract_value)}</span>` : ''}
@@ -1916,6 +2247,31 @@
           
           ${deed.remarks ? `<p style="color: #999; font-size: 13px; font-style: italic;">💬 ${deed.remarks}</p>` : ''}
           
+          ${deed.attachments ? `
+            <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #3498db;">
+              <div style="font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px;">📎 Attachments:</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                ${JSON.parse(deed.attachments).map(att => `
+                  <a href="${att.path}" target="_blank" 
+                     style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; 
+                            background: white; border: 1px solid #ddd; border-radius: 4px; 
+                            text-decoration: none; font-size: 12px; color: #333; 
+                            transition: all 0.2s;"
+                     onmouseover="this.style.background='#e3f2fd'; this.style.borderColor='#2196f3';"
+                     onmouseout="this.style.background='white'; this.style.borderColor='#ddd';">
+                    ${att.mimetype.startsWith('image/') ? '🖼️' : 
+                      att.mimetype.includes('pdf') ? '📄' : 
+                      att.mimetype.includes('word') || att.mimetype.includes('document') ? '📝' : '📎'}
+                    <span style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      ${att.originalName}
+                    </span>
+                    <span style="color: #999; font-size: 10px;">(${(att.size/1024).toFixed(1)}KB)</span>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+          
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
             <span style="font-size: 12px; color: #999;">
               Reported by ${deed.reported_by || 'N/A'} 
@@ -1977,44 +2333,116 @@
       loadDeeds();
     }
     
+    // Export deeds as PDF
+    function exportDeedsPDF() {
+      const token = localStorage.getItem('accessToken');
+      const url = `/api/officers/${officerId}/deeds/export/pdf?filter=${currentDeedFilter}`;
+      
+      // Open in new window to trigger download
+      window.open(url, '_blank');
+      
+      // Alternative: Use fetch and create blob
+      /*
+      fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `officer-performance-report-${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      })
+      .catch(err => {
+        console.error('PDF export error:', err);
+        showError('Could not generate PDF report', 'Export Failed');
+      });
+      */
+    }
+    
+    // Export deeds as Excel
+    function exportDeedsExcel() {
+      const token = localStorage.getItem('accessToken');
+      const url = `/api/officers/${officerId}/deeds/export/excel?filter=${currentDeedFilter}`;
+      
+      // Create a temporary link and trigger download
+      fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Export failed');
+        return response.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `officer-deeds-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        showSuccess('Excel report has been downloaded successfully!', 'Export Complete');
+      })
+      .catch(err => {
+        console.error('Excel export error:', err);
+        showError('Could not generate Excel report', 'Export Failed');
+      });
+    }
+    
     async function verifyDeed(deedId, status) {
       try {
+        showLoading(`${status === 'verified' ? 'Verifying' : 'Rejecting'} deed...`);
+        
         const response = await fetchWithAuth(`/api/officers/${officerId}/deeds/${deedId}`, {
           method: 'PUT',
           body: JSON.stringify({ verification_status: status })
         });
         
+        hideLoading();
+        
         if (response.ok) {
-          alert(`✅ Deed ${status}!`);
+          const statusText = status === 'verified' ? 'verified' : 'rejected';
+          showSuccess(`Deed has been ${statusText} successfully!`, 'Deed Updated');
           loadDeeds();
           loadOfficer(); // Reload to update stats
         } else {
-          alert('Failed to update deed');
+          showError('Could not update deed status', 'Update Failed');
         }
       } catch (err) {
+        hideLoading();
         console.error('Verify deed error:', err);
-        alert('Failed to update deed');
+        showError('Network error occurred', 'Update Failed');
       }
     }
     
     async function deleteDeed(deedId) {
-      if (!confirm('Are you sure you want to delete this deed record?')) return;
+      if (!confirm('⚠️ Are you sure you want to delete this deed? This action cannot be undone.')) return;
       
       try {
+        showLoading('Deleting deed...');
+        
         const response = await fetchWithAuth(`/api/officers/${officerId}/deeds/${deedId}`, {
           method: 'DELETE'
         });
         
+        hideLoading();
+        
         if (response.ok) {
-          alert('✅ Deed deleted');
+          showSuccess('Deed has been deleted successfully', 'Deed Deleted');
           loadDeeds();
           loadOfficer();
         } else {
-          alert('Failed to delete deed');
+          showError('Could not delete the deed', 'Delete Failed');
         }
       } catch (err) {
+        hideLoading();
         console.error('Delete deed error:', err);
-        alert('Failed to delete deed');
+        showError('Network error occurred', 'Delete Failed');
       }
     }
     
@@ -2039,14 +2467,60 @@
     // Load deed categories based on type
     let allDeedCategories = [];
     
+    // ===============================================
+    // CACHING & PERFORMANCE
+    // ===============================================
+    
+    // Deed categories cache
+    const CACHE_KEY_CATEGORIES = 'deed_categories_cache';
+    const CACHE_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
+    
     async function loadAllDeedCategories() {
       try {
+        // Check cache first
+        const cached = localStorage.getItem(CACHE_KEY_CATEGORIES);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          const age = Date.now() - timestamp;
+          
+          if (age < CACHE_EXPIRY_MS) {
+            console.log('✅ Using cached deed categories (age:', Math.round(age / 1000), 'seconds)');
+            allDeedCategories = data;
+            return;
+          } else {
+            console.log('⏰ Cache expired, fetching fresh data');
+          }
+        }
+        
+        // Fetch from API
         const response = await fetchWithAuth('/api/deed-categories');
-        const data = await response.json();
-        allDeedCategories = data.categories;
+        const result = await response.json();
+        allDeedCategories = result.categories;
+        
+        // Cache the result
+        localStorage.setItem(CACHE_KEY_CATEGORIES, JSON.stringify({
+          data: allDeedCategories,
+          timestamp: Date.now()
+        }));
+        
+        console.log('✅ Deed categories loaded and cached');
       } catch (err) {
         console.error('Failed to load deed categories:', err);
+        
+        // Try to use stale cache as fallback
+        const cached = localStorage.getItem(CACHE_KEY_CATEGORIES);
+        if (cached) {
+          const { data } = JSON.parse(cached);
+          allDeedCategories = data;
+          console.warn('⚠️ Using stale cache due to network error');
+        }
       }
+    }
+    
+    // Clear cache manually if needed
+    function clearDeedCategoriesCache() {
+      localStorage.removeItem(CACHE_KEY_CATEGORIES);
+      console.log('🗑️ Deed categories cache cleared');
     }
     
     function loadDeedCategories() {
@@ -2075,38 +2549,103 @@
     async function submitDeed(event) {
       event.preventDefault();
       
-      const formData = {
-        deed_type: document.getElementById('deed_type').value,
-        category: document.getElementById('deed_category').value,
-        title: document.getElementById('deed_title').value,
-        deed_date: document.getElementById('deed_date').value,
-        severity: document.getElementById('deed_severity').value || null,
-        points: parseInt(document.getElementById('deed_points').value) || 0,
-        description: document.getElementById('deed_description').value || null,
-        remarks: document.getElementById('deed_remarks').value || null,
-        is_confidential: document.getElementById('deed_confidential').checked ? 1 : 0
-      };
+      // Use FormData to support file uploads
+      const formData = new FormData();
+      formData.append('deed_type', document.getElementById('deed_type').value);
+      formData.append('category', document.getElementById('deed_category').value);
+      formData.append('title', document.getElementById('deed_title').value);
+      formData.append('deed_date', document.getElementById('deed_date').value);
+      formData.append('severity', document.getElementById('deed_severity').value || '');
+      formData.append('points', document.getElementById('deed_points').value || '0');
+      formData.append('description', document.getElementById('deed_description').value || '');
+      formData.append('remarks', document.getElementById('deed_remarks').value || '');
+      formData.append('is_confidential', document.getElementById('deed_confidential').checked ? '1' : '0');
+      
+      // Append files
+      const fileInput = document.getElementById('deed_attachments');
+      if (fileInput.files.length > 0) {
+        for (let i = 0; i < fileInput.files.length; i++) {
+          formData.append('attachments', fileInput.files[i]);
+        }
+      }
       
       try {
-        const response = await fetchWithAuth(`/api/officers/${officerId}/deeds`, {
+        showLoading('Recording deed...');
+        
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`/api/officers/${officerId}/deeds`, {
           method: 'POST',
-          body: JSON.stringify(formData)
+          headers: {
+            'Authorization': `Bearer ${token}`
+            // Don't set Content-Type - let browser set it with boundary for multipart/form-data
+          },
+          body: formData
         });
         
+        hideLoading();
+        
         if (response.ok) {
-          alert('✅ Deed recorded successfully!');
+          showSuccess('Deed has been recorded successfully!', 'Success');
           closeDeedModal();
           loadDeeds();
           loadOfficer(); // Reload to update stats in officer info
         } else {
           const error = await response.json();
-          alert('Failed to record deed: ' + (error.error || 'Unknown error'));
+          showError(error.error || 'Unknown error occurred', 'Failed to Record Deed');
         }
       } catch (err) {
+        hideLoading();
         console.error('Submit deed error:', err);
-        alert('Failed to record deed');
+        showError('Network error or server unavailable', 'Failed to Record Deed');
       }
     }
+    
+    // File preview functionality for deed attachments
+    document.addEventListener('DOMContentLoaded', () => {
+      const attachmentInput = document.getElementById('deed_attachments');
+      if (attachmentInput) {
+        attachmentInput.addEventListener('change', function(e) {
+          const preview = document.getElementById('attachmentPreview');
+          preview.innerHTML = '';
+          
+          if (e.target.files.length === 0) return;
+          
+          for (let file of e.target.files) {
+            const fileDiv = document.createElement('div');
+            fileDiv.style.cssText = 'padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px; max-width: 150px; text-align: center;';
+            
+            if (file.type.startsWith('image/')) {
+              const img = document.createElement('img');
+              img.src = URL.createObjectURL(file);
+              img.style.cssText = 'max-width: 100px; max-height: 100px; border-radius: 4px; display: block; margin: 0 auto 4px;';
+              fileDiv.appendChild(img);
+              
+              const fileName = document.createElement('div');
+              fileName.textContent = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
+              fileName.style.cssText = 'font-size: 10px; color: #666; word-break: break-all;';
+              fileDiv.appendChild(fileName);
+            } else {
+              const icon = document.createElement('div');
+              icon.textContent = '📄';
+              icon.style.cssText = 'font-size: 32px; margin-bottom: 4px;';
+              fileDiv.appendChild(icon);
+              
+              const fileName = document.createElement('div');
+              fileName.textContent = file.name.length > 20 ? file.name.substring(0, 17) + '...' : file.name;
+              fileName.style.cssText = 'font-size: 10px; color: #333; word-break: break-all; margin-bottom: 4px;';
+              fileDiv.appendChild(fileName);
+              
+              const fileSize = document.createElement('div');
+              fileSize.textContent = (file.size/1024).toFixed(1) + ' KB';
+              fileSize.style.cssText = 'font-size: 9px; color: #999;';
+              fileDiv.appendChild(fileSize);
+            }
+            
+            preview.appendChild(fileDiv);
+          }
+        });
+      }
+    });
     
     // Show Add Deed button for HR/Admin
     const userRole = localStorage.getItem('userRole');
@@ -2248,6 +2787,13 @@
         <div class="form-group">
           <label for="deed_remarks">Remarks</label>
           <textarea id="deed_remarks" name="remarks" rows="2" placeholder="Additional notes..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="deed_attachments">📎 Attachments (Optional)</label>
+          <input type="file" id="deed_attachments" name="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.txt" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 100%;">
+          <small style="color: #999; display: block; margin-top: 4px;">Max 5 files, 5MB each. Supported: PDF, Images, Documents</small>
+          <div id="attachmentPreview" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
         </div>
 
         <div class="form-group">
@@ -2529,17 +3075,20 @@
       };
       
       try {
+        showLoading('Recording transfer...');
         const result = await fetchWithAuth(`/api/officers/${officerId}/transfers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        hideLoading();
         
-        alert('Transfer recorded successfully!');
+        showSuccess('Transfer recorded successfully!', 'Success');
         closeTransferModal();
         loadOfficer(); // Reload officer data
       } catch (err) {
-        alert('Error: ' + (err.message || 'Failed to record transfer'));
+        hideLoading();
+        showError(err.message || 'Failed to record transfer', 'Error');
       }
     });
 
@@ -2562,17 +3111,20 @@
       };
       
       try {
+        showLoading('Recording promotion...');
         const result = await fetchWithAuth(`/api/officers/${officerId}/promotions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        hideLoading();
         
-        alert('Promotion recorded successfully!');
+        showSuccess('Promotion recorded successfully!', 'Success');
         closePromotionModal();
         loadOfficer(); // Reload officer data
       } catch (err) {
-        alert('Error: ' + (err.message || 'Failed to record promotion'));
+        hideLoading();
+        showError(err.message || 'Failed to record promotion', 'Error');
       }
     });
 
@@ -2592,6 +3144,7 @@
       formData.append('document', document.getElementById('document_file').files[0]);
       
       try {
+        showLoading('Uploading document...');
         const response = await fetchWithAuth(`/api/officers/${officerId}/documents`, {
           method: 'POST',
           body: formData
@@ -2599,13 +3152,16 @@
         });
         
         const result = await response.json();
+        hideLoading();
+        
         if (!response.ok) throw new Error(result.error);
         
-        alert('Document uploaded successfully!');
+        showSuccess('Document uploaded successfully!', 'Success');
         closeDocumentModal();
         renderDocuments(result.documents);
       } catch (err) {
-        alert('Error: ' + (err.message || 'Failed to upload document'));
+        hideLoading();
+        showError(err.message || 'Failed to upload document', 'Error');
       }
     });
 
@@ -2649,5 +3205,6 @@
       }
     }
   </script>
+  <script src="/js/humanize.js"></script>
 </body>
 </html>
